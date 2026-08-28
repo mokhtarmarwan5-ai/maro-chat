@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تطبيق مارو للدردشة الخاصة</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
         input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
         body { background: #05050a; color: #00ffcc; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         
         .app-container { width: 100%; max-width: 450px; height: 100%; background: #0b0c15; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(0, 255, 204, 0.2); box-shadow: 0 0 20px rgba(0, 255, 204, 0.1); }
         
-        .header { background: #0f1020; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00ffcc; color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.6); }
+        .header { background: #0f1020; padding: 12px; text-align: center; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00ffcc; color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.6); }
         .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; display: none; }
         .screen.active { display: flex; }
         
@@ -21,30 +21,41 @@
         .auth-box button { padding: 14px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); }
 
         .users-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .user-item { background: #131425; border: 1px solid rgba(0, 255, 204, 0.3); padding: 15px; margin-bottom: 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 0 10px rgba(0, 255, 204, 0.05); transition: 0.3s; }
+        .user-item { background: #131425; border: 1px solid rgba(0, 255, 204, 0.3); padding: 15px; margin-bottom: 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 0 10px rgba(0, 255, 204, 0.05); }
         .user-item:active { background: #1b1c35; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #07080f; }
-        .message { max-width: 75%; padding: 12px 16px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
+        .message { max-width: 80%; padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
         
-        .message.sent { background: linear-gradient(135deg, #00bfff, #00ffcc); color: #05050a; align-self: flex-end; border-bottom-left-radius: 2px; box-shadow: 0 0 12px rgba(0, 255, 204, 0.4); font-weight: 500; }
-        .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); box-shadow: 0 0 10px rgba(0, 191, 255, 0.1); }
+        .message.sent { background: linear-gradient(135deg, #00bfff, #00ffcc); color: #05050a; align-self: flex-end; border-bottom-left-radius: 2px; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); font-weight: 500; }
+        .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); }
         
         .message .sender-name { font-size: 10px; opacity: 0.9; margin-bottom: 4px; font-weight: bold; }
         .message img, .message video { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
         .message audio { max-width: 100%; margin-top: 5px; }
-        .message-info { font-size: 9px; align-self: flex-end; opacity: 0.8; margin-top: 4px; display: flex; gap: 4px; }
         
-        /* شريط الكتابة السفلي الثابت والمنسق بالنيون */
-        .chat-input-area { display: flex; padding: 12px; background: #0f1020; border-top: 2px solid #00ffcc; gap: 8px; align-items: center; position: relative; width: 100%; z-index: 10; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 12px; border: 1px solid rgba(0, 255, 204, 0.4); background: #131425; color: white; border-radius: 8px; outline: none; font-size: 14px; box-shadow: inset 0 0 5px rgba(0, 255, 204, 0.1); }
-        .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; color: #00ffcc; display: flex; align-items: center; justify-content: center; min-width: 42px; box-shadow: 0 0 8px rgba(0, 255, 204, 0.2); transition: 0.2s; }
-        .media-btn:active { background: #00ffcc; color: #000; }
-        
-        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 12px rgba(0, 255, 204, 0.4); transition: 0.2s; }
-        .chat-input-area button.send-btn:active { transform: scale(0.95); }
+        .message-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 9px; opacity: 0.8; gap: 10px; }
+        .reactions-container { display: flex; gap: 3px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 12px; margin-top: 4px; width: fit-content; }
 
-        .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 10px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
+        /* منطقة الإدخال الجديدة كلياً (ترتيب عمودي يضمن ظهور زر الإرسال 100%) */
+        .chat-input-area { background: #0f1020; border-top: 2px solid #00ffcc; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+        
+        .media-toolbar { display: flex; gap: 8px; justify-content: flex-start; border-bottom: 1px solid rgba(0, 255, 204, 0.15); padding-bottom: 8px; }
+        .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #00ffcc; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 5px rgba(0, 255, 204, 0.2); }
+        
+        .input-row { display: flex; gap: 8px; align-items: center; width: 100%; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: 1px solid rgba(0, 255, 204, 0.4); background: #131425; color: white; border-radius: 8px; outline: none; font-size: 14px; }
+        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); white-space: nowrap; }
+
+        .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 8px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
+
+        /* قائمة الخيارات المنبثقة للرسائل (حذف / ريأكت) */
+        #actionModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #131425; border: 1px solid #00ffcc; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); }
+        .modal-content button { padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .react-picker { display: flex; justify-content: space-around; font-size: 20px; padding: 5px 0; background: #0b0c15; border-radius: 6px; border: 1px solid rgba(0,255,204,0.2); }
+        .react-picker span { cursor: pointer; transition: 0.2s; }
+        .react-picker span:active { transform: scale(1.3); }
     </style>
 </head>
 <body>
@@ -71,21 +82,44 @@
             <div class="header" id="chatTitle">المحادثة</div>
             <div class="chat-messages" id="messagesList"></div>
             
+            <!-- منطقة الإدخال العمودية المنظمة -->
             <div class="chat-input-area">
-                <label class="media-btn" title="صورة">📷<input type="file" accept="image/*" style="display: none;" onchange="sendMedia(this, 'image')"></label>
-                <label class="media-btn" title="فيديو">🎥<input type="file" accept="video/*" style="display: none;" onchange="sendMedia(this, 'video')"></label>
-                <label class="media-btn" title="ملف صوتي">🎵<input type="file" accept="audio/*" style="display: none;" onchange="sendMedia(this, 'audio')"></label>
-                
-                <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
-                <button class="send-btn" onclick="sendMessage()">إرسال</button>
+                <div class="media-toolbar">
+                    <label class="media-btn">📷 صورة<input type="file" accept="image/*" style="display: none;" onchange="sendMedia(this, 'image')"></label>
+                    <label class="media-btn">🎥 فيديو<input type="file" accept="video/*" style="display: none;" onchange="sendMedia(this, 'video')"></label>
+                    <label class="media-btn">🎵 صوت<input type="file" accept="audio/*" style="display: none;" onchange="sendMedia(this, 'audio')"></label>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
+                    <button class="send-btn" onclick="sendMessage()">إرسال</button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- نافذة تفاعلات وحذف الرسائل -->
+    <div id="actionModal" onclick="closeModal(event)">
+        <div class="modal-content" id="modalBox">
+            <h4 style="margin: 0; text-align: center; color: #00ffcc;">تفاعل مع الرسالة</h4>
+            <div class="react-picker">
+                <span onclick="addReaction('❤️')">❤️</span>
+                <span onclick="addReaction('😂')">😂</span>
+                <span onclick="addReaction('🔥')">🔥</span>
+                <span onclick="addReaction('👍')">👍</span>
+                <span onclick="addReaction('😢')">😢</span>
+            </div>
+            <hr style="border-color: rgba(0,255,204,0.2); width: 100%;">
+            <button style="background: #ef4444; color: white;" onclick="deleteMessageForMe()">حذف عندي أنا فقط 🗑️</button>
+            <button style="background: #b91c1c; color: white;" id="deleteEveryoneBtn" onclick="deleteMessageForEveryone()">حذف للطرفين ❌</button>
+            <button style="background: #334155; color: white;" onclick="closeModalDirect()">إلغاء</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, get, push, onChildAdded, remove, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, push, onChildAdded, remove, onChildRemoved, update, onChildChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // منع القائمة المنبثقة تماماً
         document.addEventListener('contextmenu', event => event.preventDefault());
 
         const firebaseConfig = {
@@ -103,6 +137,8 @@
 
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentChatUser = "";
+        let selectedMessageId = null;
+        let selectedMessageSender = null;
 
         window.onload = function() {
             if (currentUser) showUsersScreen();
@@ -174,34 +210,42 @@
                 let data = snapshot.val();
                 let msgId = snapshot.key;
                 
+                // تحقق هل الرسالة محذوفة عندي فقط
+                let hiddenFor = data.hiddenFor || [];
+                if (hiddenFor.includes(currentUser)) return;
+
                 let msgDiv = document.createElement("div");
                 msgDiv.className = "message " + (data.sender === currentUser ? "sent" : "received");
                 msgDiv.id = "msg_" + msgId;
                 
-                let contentHTML = `<span class="sender-name">${data.sender}</span>`;
-                if (data.type === "image") {
-                    contentHTML += `<img src="${data.text}" alt="image">`;
-                } else if (data.type === "video") {
-                    contentHTML += `<video controls src="${data.text}"></video>`;
-                } else if (data.type === "audio") {
-                    contentHTML += `<audio controls src="${data.text}"></audio>`;
-                } else {
-                    contentHTML += `<span>${data.text}</span>`;
-                }
-                
-                contentHTML += `<div class="message-info"><span>✓✓</span></div>`;
-                msgDiv.innerHTML = contentHTML;
+                renderMessageContent(msgDiv, data, msgId);
 
-                msgDiv.ondblclick = () => {
-                    if (data.sender === currentUser) {
-                        if (confirm("حذف الرسالة للطرفين؟")) {
-                            remove(ref(db, 'chats/' + chatId + '/' + msgId));
-                        }
-                    }
+                // الضغط المزدوج أو الطويل لإظهار قائمة الخيارات (تفاعل وحذف)
+                msgDiv.onclick = () => {
+                    selectedMessageId = msgId;
+                    selectedMessageSender = data.sender;
+                    document.getElementById("deleteEveryoneBtn").style.display = (data.sender === currentUser) ? "block" : "none";
+                    document.getElementById("actionModal").style.display = "flex";
                 };
 
                 messagesList.appendChild(msgDiv);
                 messagesList.scrollTop = messagesList.scrollHeight;
+            });
+
+            onChildChanged(chatRef, (snapshot) => {
+                let data = snapshot.val();
+                let msgId = snapshot.key;
+                let msgDiv = document.getElementById("msg_" + msgId);
+                
+                let hiddenFor = data.hiddenFor || [];
+                if (hiddenFor.includes(currentUser)) {
+                    if (msgDiv) msgDiv.remove();
+                    return;
+                }
+
+                if (msgDiv) {
+                    renderMessageContent(msgDiv, data, msgId);
+                }
             });
 
             onChildRemoved(chatRef, (snapshot) => {
@@ -210,6 +254,28 @@
                 if (el) el.remove();
             });
         };
+
+        function renderMessageContent(msgDiv, data, msgId) {
+            let contentHTML = `<span class="sender-name">${data.sender}</span>`;
+            if (data.type === "image") {
+                contentHTML += `<img src="${data.text}" alt="image">`;
+            } else if (data.type === "video") {
+                contentHTML += `<video controls src="${data.text}"></video>`;
+            } else if (data.type === "audio") {
+                contentHTML += `<audio controls src="${data.text}"></audio>`;
+            } else {
+                contentHTML += `<span>${data.text}</span>`;
+            }
+
+            // عرض الريأكتات لو موجودة
+            if (data.reactions) {
+                let reactHTML = Object.values(data.reactions).join(" ");
+                contentHTML += `<div class="reactions-container">${reactHTML}</div>`;
+            }
+            
+            contentHTML += `<div class="message-footer"><span>✓✓</span></div>`;
+            msgDiv.innerHTML = contentHTML;
+        }
 
         window.goBackToUsers = function() {
             document.getElementById("chatScreen").classList.remove("active");
@@ -248,6 +314,52 @@
                 };
                 reader.readAsDataURL(file);
             }
+        };
+
+        window.closeModal = function(e) {
+            if (e.target.id === "actionModal") {
+                document.getElementById("actionModal").style.display = "none";
+            }
+        };
+
+        window.closeModalDirect = function() {
+            document.getElementById("actionModal").style.display = "none";
+        };
+
+        window.addReaction = function(emoji) {
+            if (!selectedMessageId) return;
+            let chatId = [currentUser, currentChatUser].sort().join("_");
+            let msgRef = ref(db, `chats/${chatId}/${selectedMessageId}/reactions`);
+            
+            // حفظ تفاعل المستخدم الحالي
+            let userKey = currentUser.replace(/[.#$\/\[\]]/g, "_");
+            update(msgRef, { [userKey]: emoji });
+            document.getElementById("actionModal").style.display = "none";
+        };
+
+        window.deleteMessageForMe = function() {
+            if (!selectedMessageId) return;
+            let chatId = [currentUser, currentChatUser].sort().join("_");
+            let msgRef = ref(db, `chats/${chatId}/${selectedMessageId}`);
+            
+            get(msgRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    let data = snapshot.val();
+                    let hiddenFor = data.hiddenFor || [];
+                    if (!hiddenFor.includes(currentUser)) {
+                        hiddenFor.push(currentUser);
+                        update(msgRef, { hiddenFor: hiddenFor });
+                    }
+                }
+            });
+            document.getElementById("actionModal").style.display = "none";
+        };
+
+        window.deleteMessageForEveryone = function() {
+            if (!selectedMessageId) return;
+            let chatId = [currentUser, currentChatUser].sort().join("_");
+            remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
+            document.getElementById("actionModal").style.display = "none";
         };
     </script>
 </body>
