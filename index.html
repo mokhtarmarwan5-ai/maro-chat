@@ -25,14 +25,18 @@
         .message.sent { background: #22c55e; color: white; align-self: flex-end; border-bottom-left-radius: 2px; }
         .message.received { background: #334155; color: white; align-self: flex-start; border-bottom-right-radius: 2px; }
         .message .sender-name { font-size: 10px; opacity: 0.8; margin-bottom: 3px; }
-        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .message img, .message video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .message audio { max-width: 100%; margin-top: 5px; }
         .message-info { font-size: 9px; align-self: flex-end; opacity: 0.7; margin-top: 4px; display: flex; gap: 4px; }
         
-        .chat-input-area { display: flex; padding: 12px; background: #0f172a; border-top: 1px solid #334155; gap: 8px; align-items: center; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: none; background: #334155; color: white; border-radius: 6px; outline: none; }
-        .chat-input-area label { background: #334155; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-        .chat-input-area button { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .chat-input-area { display: flex; padding: 10px; background: #0f172a; border-top: 1px solid #334155; gap: 6px; align-items: center; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: none; background: #334155; color: white; border-radius: 6px; outline: none; font-size: 14px; }
+        .media-btn { background: #334155; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; color: white; display: flex; align-items: center; justify-content: center; }
+        .media-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
+        .chat-input-area button.send-btn { background: #22c55e; color: white; border: none; padding: 10px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .back-btn { background: transparent; border: none; color: #38bdf8; font-size: 14px; cursor: pointer; text-align: right; padding: 10px; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -58,11 +62,14 @@
             <button class="back-btn" onclick="goBackToUsers()">← رجوع للقائمة</button>
             <div class="header" id="chatTitle">المحادثة</div>
             <div class="chat-messages" id="messagesList"></div>
+            
             <div class="chat-input-area">
-                <label for="imageInput">📷</label>
-                <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="sendImage(this)">
-                <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
-                <button onclick="sendMessage()">إرسال</button>
+                <label class="media-btn" title="إرسال صورة">📷<input type="file" accept="image/*" style="display: none;" onchange="sendFile(this, 'image')"></label>
+                <label class="media-btn" title="إرسال فيديو">🎥<input type="file" accept="video/*" style="display: none;" onchange="sendFile(this, 'video')"></label>
+                <button id="micBtn" class="media-btn" title="تسجيل صوت" onclick="toggleRecordVoice()">🎤</button>
+                
+                <input type="text" id="msgInput" placeholder="اكتب رسالتك...">
+                <button class="send-btn" onclick="sendMessage()">إرسال</button>
             </div>
         </div>
     </div>
@@ -86,19 +93,17 @@
 
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentChatUser = "";
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
 
         window.onload = function() {
-            if (currentUser) {
-                showUsersScreen();
-            }
+            if (currentUser) showUsersScreen();
         };
 
         window.login = async function() {
             let uInput = document.getElementById("usernameInput").value.trim();
-            if (!uInput) {
-                alert("برجاء إدخال اسم المستخدم");
-                return;
-            }
+            if (!uInput) { alert("برجاء إدخال اسم المستخدم"); return; }
 
             let userRef = ref(db, 'users/' + uInput);
             let snapshot = await get(userRef);
@@ -106,7 +111,7 @@
             if (snapshot.exists()) {
                 let savedOwner = localStorage.getItem("maro_chat_user");
                 if (savedOwner !== uInput) {
-                    alert("هذا اليوزر مستخدم بالفعل من شخص آخر!");
+                    alert("هذا اليوزر مستخدم بالفعل!");
                     return;
                 }
             } else {
@@ -137,7 +142,7 @@
                         if (uname !== currentUser) {
                             let div = document.createElement("div");
                             div.className = "user-item";
-                            div.innerHTML = `<span>${uname}</span> <span>💬</span>`;
+                            div.innerHTML = `<span>${uname}</span> 💬`;
                             div.onclick = () => openChat(uname);
                             listDiv.appendChild(div);
                         }
@@ -169,6 +174,10 @@
                 let contentHTML = `<span class="sender-name">${data.sender}</span>`;
                 if (data.type === "image") {
                     contentHTML += `<img src="${data.text}" alt="image">`;
+                } else if (data.type === "video") {
+                    contentHTML += `<video controls src="${data.text}"></video>`;
+                } else if (data.type === "audio") {
+                    contentHTML += `<audio controls src="${data.text}"></audio>`;
                 } else {
                     contentHTML += `<span>${data.text}</span>`;
                 }
@@ -176,10 +185,10 @@
                 contentHTML += `<div class="message-info"><span>✓✓</span></div>`;
                 msgDiv.innerHTML = contentHTML;
 
-                // الضغط على الرسالة لحذفها للطرفين إذا كانت بتاعتك
+                // دبل كليك لحذف الرسالة للطرفين
                 msgDiv.ondblclick = () => {
                     if (data.sender === currentUser) {
-                        if (confirm("هل تريد حذف هذه الرسالة للطرفين؟")) {
+                        if (confirm("حذف الرسالة للطرفين؟")) {
                             remove(ref(db, 'chats/' + chatId + '/' + msgId));
                         }
                     }
@@ -207,9 +216,7 @@
             if (!msgInput.value.trim() || !currentChatUser) return;
 
             let chatId = [currentUser, currentChatUser].sort().join("_");
-            let chatRef = ref(db, 'chats/' + chatId);
-
-            push(chatRef, {
+            push(ref(db, 'chats/' + chatId), {
                 sender: currentUser,
                 text: msgInput.value,
                 type: "text",
@@ -219,21 +226,62 @@
             msgInput.value = "";
         };
 
-        window.sendImage = function(input) {
+        window.sendFile = function(input, type) {
             if (input.files && input.files[0]) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     let chatId = [currentUser, currentChatUser].sort().join("_");
-                    let chatRef = ref(db, 'chats/' + chatId);
-
-                    push(chatRef, {
+                    push(ref(db, 'chats/' + chatId), {
                         sender: currentUser,
                         text: e.target.result,
-                        type: "image",
+                        type: type,
                         timestamp: Date.now()
                     });
                 };
                 reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        // تسجيل الصوت
+        window.toggleRecordVoice = async function() {
+            let micBtn = document.getElementById("micBtn");
+            if (!isRecording) {
+                try {
+                    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        let audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                        let reader = new FileReader();
+                        reader.onload = function(e) {
+                            let chatId = [currentUser, currentChatUser].sort().join("_");
+                            push(ref(db, 'chats/' + chatId), {
+                                sender: currentUser,
+                                text: e.target.result,
+                                type: "audio",
+                                timestamp: Date.now()
+                            });
+                        };
+                        reader.readAsDataURL(audioBlob);
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.classList.add("recording");
+                    micBtn.innerText = "⏹";
+                } catch (err) {
+                    alert("عذراً، إذن الميكروفون مرفوض أو غير متوفر!");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove("recording");
+                micBtn.innerText = "🎤";
             }
         };
     </script>
