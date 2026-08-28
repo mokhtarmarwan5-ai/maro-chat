@@ -2,11 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تطبيق مارو للدردشة الخاصة</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #0f172a; color: #fff; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+        body { background: #0f172a; color: #fff; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app-container { width: 100%; max-width: 450px; height: 100%; background: #1e293b; display: flex; flex-direction: column; overflow: hidden; }
         .header { background: #0f172a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #334155; }
         .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; display: none; }
@@ -21,7 +22,7 @@
         .user-item:active { background: #475569; }
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { max-width: 75%; padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; cursor: pointer; }
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
         .message.sent { background: #22c55e; color: white; align-self: flex-end; border-bottom-left-radius: 2px; }
         .message.received { background: #334155; color: white; align-self: flex-start; border-bottom-right-radius: 2px; }
         .message .sender-name { font-size: 10px; opacity: 0.8; margin-bottom: 3px; }
@@ -31,9 +32,9 @@
         
         .chat-input-area { display: flex; padding: 10px; background: #0f172a; border-top: 1px solid #334155; gap: 6px; align-items: center; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: none; background: #334155; color: white; border-radius: 6px; outline: none; font-size: 14px; }
-        .media-btn { background: #334155; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; color: white; display: flex; align-items: center; justify-content: center; }
+        .media-btn { background: #334155; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; color: white; display: flex; align-items: center; justify-content: center; min-width: 36px; }
         .media-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
-        .chat-input-area button.send-btn { background: #22c55e; color: white; border: none; padding: 10px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .chat-input-area button.send-btn { background: #22c55e; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .back-btn { background: transparent; border: none; color: #38bdf8; font-size: 14px; cursor: pointer; text-align: right; padding: 10px; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
@@ -64,8 +65,8 @@
             <div class="chat-messages" id="messagesList"></div>
             
             <div class="chat-input-area">
-                <label class="media-btn" title="إرسال صورة">📷<input type="file" accept="image/*" style="display: none;" onchange="sendFile(this, 'image')"></label>
-                <label class="media-btn" title="إرسال فيديو">🎥<input type="file" accept="video/*" style="display: none;" onchange="sendFile(this, 'video')"></label>
+                <label class="media-btn" title="صورة">📷<input type="file" accept="image/*" style="display: none;" onchange="sendMedia(this, 'image')"></label>
+                <label class="media-btn" title="فيديو">🎥<input type="file" accept="video/*" style="display: none;" onchange="sendMedia(this, 'video')"></label>
                 <button id="micBtn" class="media-btn" title="تسجيل صوت" onclick="toggleRecordVoice()">🎤</button>
                 
                 <input type="text" id="msgInput" placeholder="اكتب رسالتك...">
@@ -77,6 +78,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, get, push, onChildAdded, remove, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        document.addEventListener('contextmenu', event => event.preventDefault());
 
         const firebaseConfig = {
             apiKey: "AIzaSyCUs1E0Q4ZmPtCDdBkDVnnZ1maikeq1RIU",
@@ -185,7 +188,6 @@
                 contentHTML += `<div class="message-info"><span>✓✓</span></div>`;
                 msgDiv.innerHTML = contentHTML;
 
-                // دبل كليك لحذف الرسالة للطرفين
                 msgDiv.ondblclick = () => {
                     if (data.sender === currentUser) {
                         if (confirm("حذف الرسالة للطرفين؟")) {
@@ -226,8 +228,9 @@
             msgInput.value = "";
         };
 
-        window.sendFile = function(input, type) {
+        window.sendMedia = function(input, type) {
             if (input.files && input.files[0]) {
+                let file = input.files[0];
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     let chatId = [currentUser, currentChatUser].sort().join("_");
@@ -237,12 +240,12 @@
                         type: type,
                         timestamp: Date.now()
                     });
+                    input.value = ""; 
                 };
-                reader.readAsDataURL(input.files[0]);
+                reader.readAsDataURL(file);
             }
         };
 
-        // تسجيل الصوت
         window.toggleRecordVoice = async function() {
             let micBtn = document.getElementById("micBtn");
             if (!isRecording) {
@@ -275,7 +278,7 @@
                     micBtn.classList.add("recording");
                     micBtn.innerText = "⏹";
                 } catch (err) {
-                    alert("عذراً، إذن الميكروفون مرفوض أو غير متوفر!");
+                    alert("برجاء السماح للتطبيق بالوصول للميكروفون من إعدادات الهاتف.");
                 }
             } else {
                 mediaRecorder.stop();
@@ -287,3 +290,4 @@
     </script>
 </body>
 </html>
+
