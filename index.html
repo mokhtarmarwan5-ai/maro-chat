@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تطبيق مارو للدردشة الخاصة</title>
+    <title>تطبيق مارو للدردشة المؤمنة</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
         input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
@@ -11,52 +11,65 @@
         
         .app-container { width: 100%; max-width: 450px; height: 100%; background: #0b0c15; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(0, 255, 204, 0.2); box-shadow: 0 0 20px rgba(0, 255, 204, 0.1); }
         
-        .header { background: #0f1020; padding: 12px; text-align: center; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00ffcc; color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.6); }
+        .header { background: #0f1020; padding: 12px; text-align: center; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00ffcc; color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.6); display: flex; justify-content: space-between; align-items: center; }
         .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; display: none; }
         .screen.active { display: flex; }
         
-        .auth-box { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 20px; }
+        .auth-box { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 15px; overflow-y: auto; }
         .auth-box h2 { color: #00ffcc; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
-        .auth-box input { padding: 14px; border-radius: 8px; border: 1px solid #00ffcc; background: #131425; color: #fff; font-size: 16px; outline: none; box-shadow: inset 0 0 8px rgba(0, 255, 204, 0.2); }
-        .auth-box button { padding: 14px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); }
+        .auth-box input[type="text"], .auth-box input[type="password"] { padding: 14px; border-radius: 8px; border: 1px solid #00ffcc; background: #131425; color: #fff; font-size: 16px; outline: none; }
+        .auth-box button { padding: 14px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
 
-        .users-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .user-item { background: #131425; border: 1px solid rgba(0, 255, 204, 0.3); padding: 15px; margin-bottom: 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 0 10px rgba(0, 255, 204, 0.05); }
-        .user-item:active { background: #1b1c35; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
+        .profile-pic-upload { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .profile-preview { width: 80px; height: 80px; border-radius: 50%; border: 2px dashed #00ffcc; background: #131425; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: pointer; position: relative; }
+        .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-preview span { font-size: 11px; color: #00ffcc; text-align: center; padding: 5px; }
+
+        .tabs { display: flex; background: #0f1020; border-bottom: 1px solid rgba(0,255,204,0.2); }
+        .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: #888; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .tab-btn.active { color: #00ffcc; border-bottom: 2px solid #00ffcc; }
+
+        .list-section { flex: 1; overflow-y: auto; padding: 15px; }
+        .item-card { background: #131425; border: 1px solid rgba(0, 255, 204, 0.3); padding: 10px 15px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; gap: 10px; }
+        
+        .user-avatar-sm { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #00ffcc; background: #0b0c15; }
+        .user-info-area { display: flex; align-items: center; gap: 10px; flex: 1; }
+
+        .admin-badge { background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .ban-btn { background: #b91c1c; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; }
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #07080f; }
         .message { max-width: 80%; padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
         
-        .message.sent { background: linear-gradient(135deg, #00bfff, #00ffcc); color: #05050a; align-self: flex-end; border-bottom-left-radius: 2px; box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); font-weight: 500; }
+        .message.sent { background: linear-gradient(135deg, #00bfff, #00ffcc); color: #05050a; align-self: flex-end; border-bottom-left-radius: 2px; font-weight: 500; }
         .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); }
         
-        .message .sender-name { font-size: 10px; opacity: 0.9; margin-bottom: 4px; font-weight: bold; }
-        
-        /* تحسين استهلاك النت للصور: تظهر كزر معاينة أولاً لتوفير الباقة */
+        .msg-header-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .msg-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+        .message .sender-name { font-size: 11px; font-weight: bold; opacity: 0.9; }
+
         .media-placeholder { background: rgba(0,255,204,0.1); border: 1px dashed #00ffcc; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 12px; color: #00ffcc; }
-        .message img { max-width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); display: block; }
+        .message img { max-width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 5px; display: block; }
         .message video { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 5px; display: block; }
-        .message audio { max-width: 100%; margin-top: 5px; }
         
         .message-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 9px; opacity: 0.8; gap: 10px; }
         .reactions-container { display: flex; gap: 3px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 12px; margin-top: 4px; width: fit-content; }
 
         .chat-input-area { background: #0f1020; border-top: 2px solid #00ffcc; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
         .media-toolbar { display: flex; gap: 8px; justify-content: flex-start; border-bottom: 1px solid rgba(0, 255, 204, 0.15); padding-bottom: 8px; }
-        .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #00ffcc; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 5px rgba(0, 255, 204, 0.2); }
+        .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #00ffcc; }
         
         .input-row { display: flex; gap: 8px; align-items: center; width: 100%; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: 1px solid rgba(0, 255, 204, 0.4); background: #131425; color: white; border-radius: 8px; outline: none; font-size: 14px; }
-        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); white-space: nowrap; }
+        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
 
-        .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 8px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
+        .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; padding: 8px; font-weight: bold; }
+        .floating-action-btn { position: fixed; bottom: 20px; left: 20px; background: #00ffcc; color: #000; border: none; padding: 12px 18px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,204,0.5); z-index: 100; }
 
         #actionModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #131425; border: 1px solid #00ffcc; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); }
+        .modal-content { background: #131425; border: 1px solid #00ffcc; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
         .modal-content button { padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
         .react-picker { display: flex; justify-content: space-around; font-size: 20px; padding: 5px 0; background: #0b0c15; border-radius: 6px; border: 1px solid rgba(0,255,204,0.2); }
-        .react-picker span { cursor: pointer; transition: 0.2s; }
-        .react-picker span:active { transform: scale(1.3); }
     </style>
 </head>
 <body>
@@ -66,28 +79,50 @@
         <div id="authScreen" class="screen active">
             <div class="auth-box">
                 <h2>تسجيل دخول مارو شات</h2>
-                <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم...">
+                
+                <div class="profile-pic-upload">
+                    <div class="profile-preview" onclick="document.getElementById('profilePicInput').click()">
+                        <img id="profilePreviewImg" src="" alt="" style="display:none;">
+                        <span id="profilePlaceholderText">اختر صورتك الشخصية</span>
+                    </div>
+                    <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfilePic(this)">
+                </div>
+
+                <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم..." oninput="checkAdminNameInput()">
+                <div id="adminPasswordContainer" style="display: none;">
+                    <input type="password" id="adminPasswordInput" placeholder="اكتب باسورد الآدمن السرّي...">
+                </div>
                 <button onclick="login()">دخول للتطبيق</button>
             </div>
         </div>
 
-        <!-- شاشة قائمة المستخدمين -->
+        <!-- شاشة الرئيسية -->
         <div id="usersScreen" class="screen">
-            <div class="header">قائمة الأشخاص المتاحين</div>
-            <div id="usersList" class="users-list"></div>
+            <div class="header">
+                <span id="welcomeTitle">الدردشة</span>
+                <span id="adminBadgeContainer"></span>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" id="tabUsers" onclick="switchTab('users')">الأشخاص</button>
+                <button class="tab-btn" id="tabGroups" onclick="switchTab('groups')">الجروبات</button>
+            </div>
+            <div id="mainList" class="list-section"></div>
+            <button class="floating-action-btn" id="addGroupBtn" onclick="showCreateGroupModal()">+ إنشاء جروب</button>
         </div>
 
-        <!-- شاشة المحادثة الخاصة -->
+        <!-- شاشة المحادثة -->
         <div id="chatScreen" class="screen">
-            <button class="back-btn" onclick="goBackToUsers()">← رجوع للقائمة</button>
-            <div class="header" id="chatTitle">المحادثة</div>
+            <div class="header">
+                <button class="back-btn" onclick="goBackToUsers()">← رجوع</button>
+                <span id="chatTitle">المحادثة</span>
+                <span></span>
+            </div>
             <div class="chat-messages" id="messagesList"></div>
             
             <div class="chat-input-area">
                 <div class="media-toolbar">
                     <label class="media-btn">📷 صورة<input type="file" accept="image/*" style="display: none;" onchange="sendMedia(this, 'image')"></label>
                     <label class="media-btn">🎥 فيديو<input type="file" accept="video/*" style="display: none;" onchange="sendMedia(this, 'video')"></label>
-                    <label class="media-btn">🎵 صوت<input type="file" accept="audio/*" style="display: none;" onchange="sendMedia(this, 'audio')"></label>
                 </div>
                 <div class="input-row">
                     <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
@@ -97,21 +132,30 @@
         </div>
     </div>
 
-    <!-- نافذة تفاعلات وحذف الرسائل -->
+    <!-- نافذة تفاعلات -->
     <div id="actionModal" onclick="closeModal(event)">
         <div class="modal-content" id="modalBox">
-            <h4 style="margin: 0; text-align: center; color: #00ffcc;">تفاعل مع الرسالة</h4>
+            <h4 style="margin: 0; text-align: center; color: #00ffcc;">خيارات الرسالة</h4>
             <div class="react-picker">
                 <span onclick="addReaction('❤️')">❤️</span>
                 <span onclick="addReaction('😂')">😂</span>
                 <span onclick="addReaction('🔥')">🔥</span>
                 <span onclick="addReaction('👍')">👍</span>
-                <span onclick="addReaction('😢')">😢</span>
             </div>
-            <hr style="border-color: rgba(0,255,204,0.2); width: 100%;">
+            <hr style="border-color: rgba(0,255,204,0.2);">
             <button style="background: #ef4444; color: white;" onclick="deleteMessageForMe()">حذف عندي أنا فقط 🗑️</button>
-            <button style="background: #b91c1c; color: white;" id="deleteEveryoneBtn" onclick="deleteMessageForEveryone()">حذف للطرفين ❌</button>
+            <button style="background: #b91c1c; color: white;" id="deleteEveryoneBtn" onclick="deleteMessageForEveryone()">حذف للطرفين (للكل) ❌</button>
             <button style="background: #334155; color: white;" onclick="closeModalDirect()">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء جروب -->
+    <div id="groupModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:1000;">
+        <div class="modal-content">
+            <h3 style="margin:0; color:#00ffcc; text-align:center;">إنشاء جروب جديد</h3>
+            <input type="text" id="groupNameInput" placeholder="اسم الجروب..." style="padding:10px; background:#07080f; border:1px solid #00ffcc; color:white; border-radius:6px;">
+            <button style="background:#00ffcc; color:#000;" onclick="createGroup()">إنشاء الجروب</button>
+            <button style="background:#334155; color:white;" onclick="document.getElementById('groupModal').style.display='none'">إلغاء</button>
         </div>
     </div>
 
@@ -134,13 +178,44 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        const MASTER_ADMIN = "MaroAdmin";
+        const ADMIN_SECRET_PASS = "maro01103393855maro"; 
+
         let currentUser = localStorage.getItem("maro_chat_user") || "";
-        let currentChatUser = "";
+        let currentAvatar = localStorage.getItem("maro_chat_avatar") || "";
+        let currentTarget = "";
+        let isGroupChat = false;
         let selectedMessageId = null;
+        let activeTab = "users";
+        let tempAvatarBase64 = "";
 
         window.onload = function() {
             if (currentUser) {
-                showUsersScreen();
+                checkBanAndProceed();
+            }
+        };
+
+        window.previewProfilePic = function(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    tempAvatarBase64 = e.target.result;
+                    let img = document.getElementById("profilePreviewImg");
+                    img.src = tempAvatarBase64;
+                    img.style.display = "block";
+                    document.getElementById("profilePlaceholderText").style.display = "none";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        window.checkAdminNameInput = function() {
+            let uInput = document.getElementById("usernameInput").value.trim();
+            let passBox = document.getElementById("adminPasswordContainer");
+            if (uInput === MASTER_ADMIN) {
+                passBox.style.display = "block";
+            } else {
+                passBox.style.display = "none";
             }
         };
 
@@ -151,59 +226,157 @@
                 return;
             }
 
+            if (uInput === MASTER_ADMIN) {
+                let pInput = document.getElementById("adminPasswordInput").value;
+                if (pInput !== ADMIN_SECRET_PASS) {
+                    alert("كلمة مرور الآدمن غير صحيحة!");
+                    return;
+                }
+            }
+
             currentUser = uInput;
+            if (tempAvatarBase64) {
+                currentAvatar = tempAvatarBase64;
+                localStorage.setItem("maro_chat_avatar", currentAvatar);
+            }
             localStorage.setItem("maro_chat_user", currentUser);
 
-            try {
-                set(ref(db, 'users/' + currentUser), { username: currentUser, joined: Date.now() });
-            } catch(e) {}
-
-            showUsersScreen();
+            get(ref(db, 'bans/' + currentUser)).then((snapshot) => {
+                if (snapshot.exists() && snapshot.val() === true) {
+                    alert("عذراً، أنت محظور من استخدام التطبيق!");
+                    localStorage.removeItem("maro_chat_user");
+                    return;
+                }
+                set(ref(db, 'users/' + currentUser), { 
+                    username: currentUser, 
+                    avatar: currentAvatar || "",
+                    joined: Date.now() 
+                });
+                showUsersScreen();
+            });
         };
+
+        function checkBanAndProceed() {
+            get(ref(db, 'bans/' + currentUser)).then((snapshot) => {
+                if (snapshot.exists() && snapshot.val() === true) {
+                    alert("تم حظرك من قِبل الآدمن!");
+                    localStorage.removeItem("maro_chat_user");
+                    location.reload();
+                    return;
+                }
+                showUsersScreen();
+            });
+        }
 
         function showUsersScreen() {
             document.getElementById("authScreen").classList.remove("active");
             document.getElementById("chatScreen").classList.remove("active");
             document.getElementById("usersScreen").classList.add("active");
-            loadUsers();
-        }
-
-        function loadUsers() {
-            let listDiv = document.getElementById("usersList");
-            let usersRef = ref(db, 'users');
             
-            listDiv.innerHTML = "<div class='user-item' onclick=\"openChat('مازن')\"><span>مازن</span> 💬</div>";
-
-            get(usersRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    listDiv.innerHTML = "";
-                    snapshot.forEach((childSnap) => {
-                        let uname = childSnap.val().username;
-                        if (uname && uname !== currentUser) {
-                            let div = document.createElement("div");
-                            div.className = "user-item";
-                            div.innerHTML = `<span>${uname}</span> 💬`;
-                            div.onclick = () => openChat(uname);
-                            listDiv.appendChild(div);
-                        }
-                    });
-                }
-            }).catch(() => {});
+            let isAdm = (currentUser === MASTER_ADMIN);
+            document.getElementById("welcomeTitle").innerText = "أهلاً، " + currentUser;
+            if (isAdm) {
+                document.getElementById("adminBadgeContainer").innerHTML = `<span class="admin-badge">👑 الآدمن العام</span>`;
+            }
+            document.getElementById("addGroupBtn").style.display = "block";
+            loadMainList();
         }
 
-        window.openChat = function(targetUser) {
-            currentChatUser = targetUser;
-            document.getElementById("chatTitle").innerText = "محادثة مع: " + targetUser;
+        window.switchTab = function(tab) {
+            activeTab = tab;
+            document.getElementById("tabUsers").className = "tab-btn " + (tab === 'users' ? 'active' : '');
+            document.getElementById("tabGroups").className = "tab-btn " + (tab === 'groups' ? 'active' : '');
+            loadMainList();
+        }
+
+        function loadMainList() {
+            let listDiv = document.getElementById("mainList");
+            listDiv.innerHTML = "";
+            let isAdm = (currentUser === MASTER_ADMIN);
+
+            if (activeTab === 'users') {
+                get(ref(db, 'users')).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        snapshot.forEach((childSnap) => {
+                            let userData = childSnap.val();
+                            let uname = userData.username;
+                            let uAvatar = userData.avatar || 'https://via.placeholder.com/40';
+                            if (uname && uname !== currentUser) {
+                                let div = document.createElement("div");
+                                div.className = "item-card";
+                                let banBtnHTML = (isAdm) ? `<button class="ban-btn" onclick="banUser(event, '${uname}')">حظر ⛔</button>` : '';
+                                div.innerHTML = `
+                                    <div class="user-info-area">
+                                        <img src="${uAvatar}" class="user-avatar-sm" alt="">
+                                        <span>💬 ${uname}</span>
+                                    </div>
+                                    ${banBtnHTML}
+                                `;
+                                div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openChat(uname, false); };
+                                listDiv.appendChild(div);
+                            }
+                        });
+                    }
+                });
+            } else {
+                get(ref(db, 'groups')).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        snapshot.forEach((childSnap) => {
+                            let gName = childSnap.key;
+                            let div = document.createElement("div");
+                            div.className = "item-card";
+                            div.innerHTML = `
+                                <div class="user-info-area">
+                                    <div class="user-avatar-sm" style="display:flex; justify-content:center; align-items:center; background:#131425; font-size:18px;">👥</div>
+                                    <span>جروب: ${gName}</span>
+                                </div>
+                            `;
+                            div.onclick = () => openChat(gName, true);
+                            listDiv.appendChild(div);
+                        });
+                    } else {
+                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا توجد جروبات حالياً. انشئ جروباً جديداً الآن!</div>";
+                    }
+                });
+            }
+        }
+
+        window.banUser = function(e, uname) {
+            e.stopPropagation();
+            if (confirm(`هل أنت متأكد من حظر المستخدم ${uname}؟`)) {
+                set(ref(db, 'bans/' + uname), true).then(() => {
+                    alert("تم حظر المستخدم بنجاح.");
+                    loadMainList();
+                });
+            }
+        };
+
+        window.showCreateGroupModal = function() {
+            document.getElementById("groupModal").style.display = "flex";
+        };
+
+        window.createGroup = function() {
+            let gName = document.getElementById("groupNameInput").value.trim();
+            if (!gName) return;
+            set(ref(db, 'groups/' + gName + '/info'), { creator: currentUser, created: Date.now() }).then(() => {
+                document.getElementById('groupModal').style.display = 'none';
+                document.getElementById("groupNameInput").value = "";
+                switchTab('groups');
+            });
+        };
+
+        window.openChat = function(target, isGroup) {
+            currentTarget = target;
+            isGroupChat = isGroup;
+            document.getElementById("chatTitle").innerText = (isGroup ? "جروب: " : "محادثة: ") + target;
             document.getElementById("usersScreen").classList.remove("active");
             document.getElementById("chatScreen").classList.add("active");
             
             let messagesList = document.getElementById("messagesList");
             messagesList.innerHTML = "";
             
-            let chatId = [currentUser, targetUser].sort().join("_");
-            let chatRef = query(ref(db, 'chats/' + chatId), limitToLast(20)); // تقليل لآخر 20 رسالة فقط لتوفير الباقة تماماً
-
-            messagesList.innerHTML = "";
+            let chatPath = isGroup ? 'groups/' + target + '/messages' : 'chats/' + [currentUser, target].sort().join("_");
+            let chatRef = query(ref(db, chatPath), limitToLast(30));
 
             onChildAdded(chatRef, (snapshot) => {
                 let data = snapshot.val();
@@ -249,7 +422,9 @@
 
             msgDiv.onclick = () => {
                 selectedMessageId = msgId;
-                document.getElementById("deleteEveryoneBtn").style.display = (data.sender === currentUser) ? "block" : "none";
+                let isAdm = (currentUser === MASTER_ADMIN);
+                let canDeleteEveryone = (data.sender === currentUser || isAdm);
+                document.getElementById("deleteEveryoneBtn").style.display = canDeleteEveryone ? "block" : "none";
                 document.getElementById("actionModal").style.display = "flex";
             };
 
@@ -258,15 +433,18 @@
         }
 
         function renderMessageContent(msgDiv, data, msgId) {
-            let contentHTML = `<span class="sender-name">${data.sender}</span>`;
-            
-            // جعل الصور والفيديوهات لا تُحمل تلقائياً إلا بضغط المستخدم لتوفير النت
+            let avatarHtml = data.avatar ? `<img src="${data.avatar}" class="msg-avatar" alt="">` : '';
+            let contentHTML = `
+                <div class="msg-header-row">
+                    ${avatarHtml}
+                    <span class="sender-name">${data.sender}</span>
+                </div>
+            `;
+
             if (data.type === "image") {
-                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'image', '${data.text}')">📷 اضغط لتحميل الصورة (توفير للنت)</div>`;
+                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'image', '${data.text}')">📷 اضغط لتحميل الصورة</div>`;
             } else if (data.type === "video") {
-                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'video', '${data.text}')">🎥 اضغط لتحميل الفيديو (توفير للنت)</div>`;
-            } else if (data.type === "audio") {
-                contentHTML += `<audio controls src="${data.text}"></audio>`;
+                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'video', '${data.text}')">🎥 اضغط لتحميل الفيديو</div>`;
             } else {
                 contentHTML += `<span>${data.text}</span>`;
             }
@@ -284,7 +462,6 @@
             event.stopPropagation();
             let container = document.getElementById("media_" + msgId);
             if (!container) return;
-            
             if (type === "image") {
                 container.outerHTML = `<img src="${url}" alt="image">`;
             } else if (type === "video") {
@@ -295,19 +472,20 @@
         window.goBackToUsers = function() {
             document.getElementById("chatScreen").classList.remove("active");
             document.getElementById("usersScreen").classList.add("active");
-            loadUsers();
+            loadMainList();
         };
 
         window.sendMessage = function() {
             let msgInput = document.getElementById("msgInput");
             let textVal = msgInput.value.trim();
-            if (!textVal || !currentChatUser) return;
+            if (!textVal || !currentTarget) return;
 
-            let chatId = [currentUser, currentChatUser].sort().join("_");
-            let newMsgRef = push(ref(db, 'chats/' + chatId));
+            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
+            let newMsgRef = push(ref(db, chatPath));
             
             set(newMsgRef, {
                 sender: currentUser,
+                avatar: currentAvatar || "",
                 text: textVal,
                 type: "text",
                 timestamp: Date.now()
@@ -321,11 +499,12 @@
                 let file = input.files[0];
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    let chatId = [currentUser, currentChatUser].sort().join("_");
-                    let newMsgRef = push(ref(db, 'chats/' + chatId));
+                    let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
+                    let newMsgRef = push(ref(db, chatPath));
                     
                     set(newMsgRef, {
                         sender: currentUser,
+                        avatar: currentAvatar || "",
                         text: e.target.result,
                         type: type,
                         timestamp: Date.now()
@@ -337,27 +516,22 @@
         };
 
         window.closeModal = function(e) {
-            if (e.target.id === "actionModal") {
-                document.getElementById("actionModal").style.display = "none";
-            }
+            if (e.target.id === "actionModal") document.getElementById("actionModal").style.display = "none";
         };
-
-        window.closeModalDirect = function() {
-            document.getElementById("actionModal").style.display = "none";
-        };
+        window.closeModalDirect = function() { document.getElementById("actionModal").style.display = "none"; };
 
         window.addReaction = function(emoji) {
-            if (!selectedMessageId || !currentChatUser) return;
-            let chatId = [currentUser, currentChatUser].sort().join("_");
+            if (!selectedMessageId || !currentTarget) return;
+            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
             let userKey = currentUser.replace(/[.#$\/\[\]]/g, "_");
-            update(ref(db, `chats/${chatId}/${selectedMessageId}/reactions`), { [userKey]: emoji });
+            update(ref(db, `${chatPath}/${selectedMessageId}/reactions`), { [userKey]: emoji });
             document.getElementById("actionModal").style.display = "none";
         };
 
         window.deleteMessageForMe = function() {
-            if (!selectedMessageId || !currentChatUser) return;
-            let chatId = [currentUser, currentChatUser].sort().join("_");
-            let msgRef = ref(db, `chats/${chatId}/${selectedMessageId}`);
+            if (!selectedMessageId || !currentTarget) return;
+            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
+            let msgRef = ref(db, `${chatPath}/${selectedMessageId}`);
             
             get(msgRef).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -373,11 +547,12 @@
         };
 
         window.deleteMessageForEveryone = function() {
-            if (!selectedMessageId || !currentChatUser) return;
-            let chatId = [currentUser, currentChatUser].sort().join("_");
-            remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
+            if (!selectedMessageId || !currentTarget) return;
+            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
+            remove(ref(db, `${chatPath}/${selectedMessageId}`));
             document.getElementById("actionModal").style.display = "none";
         };
     </script>
 </body>
 </html>
+
