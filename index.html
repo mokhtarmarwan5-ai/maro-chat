@@ -65,7 +65,7 @@
         <div id="authScreen" class="screen active">
             <div class="auth-box">
                 <h2>تسجيل دخول مارو شات</h2>
-                <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم (يوزر فريد)...">
+                <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم...">
                 <button onclick="login()">دخول للتطبيق</button>
             </div>
         </div>
@@ -116,7 +116,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, get, push, onChildAdded, remove, onChildRemoved, update, onChildChanged, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, push, onChildAdded, remove, update, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -133,44 +133,31 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // تفعيل التخزين المؤقت للعمل بدون إنترنت (Offline Persistence) تلقائياً
-        try {
-            enableIndexedDbPersistence(db).catch((err) => {
-                console.log("Persistence error: ", err);
-            });
-        } catch (e) {}
-
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentChatUser = "";
         let selectedMessageId = null;
-        let selectedMessageSender = null;
 
         window.onload = function() {
-            if (currentUser) showUsersScreen();
+            if (currentUser) {
+                showUsersScreen();
+            }
         };
 
-        window.login = async function() {
+        window.login = function() {
             let uInput = document.getElementById("usernameInput").value.trim();
-            if (!uInput) { alert("برجاء إدخال اسم المستخدم"); return; }
-
-            let userRef = ref(db, 'users/' + uInput);
-            try {
-                let snapshot = await get(userRef);
-                if (snapshot.exists()) {
-                    let savedOwner = localStorage.getItem("maro_chat_user");
-                    if (savedOwner !== uInput) {
-                        alert("هذا اليوزر مستخدم بالفعل!");
-                        return;
-                    }
-                } else {
-                    await set(userRef, { username: uInput, joined: Date.now() });
-                }
-            } catch (e) {
-                // لو مفيش نت اثناء تسجيل الدخول وكان اليوزر متسجل قبل كده يدخل عادي
+            if (!uInput) {
+                alert("برجاء إدخال اسم المستخدم");
+                return;
             }
 
             currentUser = uInput;
             localStorage.setItem("maro_chat_user", currentUser);
+
+            // حفظ اليوزر في قاعدة البيانات في الخلفية بدون ما يعطل الدخول
+            try {
+                set(ref(db, 'users/' + currentUser), { username: currentUser, joined: Date.now() });
+            } catch(e) {}
+
             showUsersScreen();
         };
 
@@ -185,12 +172,15 @@
             let listDiv = document.getElementById("usersList");
             let usersRef = ref(db, 'users');
             
+            // إضافة يوزر افتراضي كمثال لو القائمة فاضية
+            listDiv.innerHTML = "<div class='user-item' onclick=\"openChat('مازن')\"><span>مازن</span> 💬</div>";
+
             get(usersRef).then((snapshot) => {
-                listDiv.innerHTML = "";
                 if (snapshot.exists()) {
+                    listDiv.innerHTML = "";
                     snapshot.forEach((childSnap) => {
                         let uname = childSnap.val().username;
-                        if (uname !== currentUser) {
+                        if (uname && uname !== currentUser) {
                             let div = document.createElement("div");
                             div.className = "user-item";
                             div.innerHTML = `<span>${uname}</span> 💬`;
@@ -199,9 +189,7 @@
                         }
                     });
                 }
-            }).catch(() => {
-                // في حالة انقطاع الإنترنت، جلب المستخدمين المخزنين محلياً لو أمكن
-            });
+            }).catch(() => {});
         }
 
         window.openChat = function(targetUser) {
@@ -214,8 +202,6 @@
             messagesList.innerHTML = "";
             
             let chatId = [currentUser, targetUser].sort().join("_");
-            
-            // تحميل الرسائل فوراً من الذاكرة المحلية (LocalStorage) لفتح الشات في أقل من جزء من الثانية وبدون نت
             let localCacheKey = "maro_chat_cache_" + chatId;
             let cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || "{}");
             
@@ -227,11 +213,9 @@
             onChildAdded(chatRef, (snapshot) => {
                 let data = snapshot.val();
                 let msgId = snapshot.key;
-                liveMessages[msgId] = data;
-                localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
-                
-                // تحديث العرض إذا لم تكن الرسالة موجودة مسبقاً
-                if (!document.getElementById("msg_" + msgId)) {
+                if (data) {
+                    liveMessages[msgId] = data;
+                    localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
                     appendSingleMessage(msgId, data, messagesList);
                 }
             });
@@ -239,17 +223,17 @@
             onChildChanged(chatRef, (snapshot) => {
                 let data = snapshot.val();
                 let msgId = snapshot.key;
-                liveMessages[msgId] = data;
-                localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
-                
-                let msgDiv = document.getElementById("msg_" + msgId);
-                let hiddenFor = data.hiddenFor || [];
-                if (hiddenFor.includes(currentUser)) {
-                    if (msgDiv) msgDiv.remove();
-                    return;
-                }
-                if (msgDiv) {
-                    renderMessageContent(msgDiv, data);
+                if (data) {
+                    liveMessages[msgId] = data;
+                    localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
+                    
+                    let msgDiv = document.getElementById("msg_" + msgId);
+                    let hiddenFor = data.hiddenFor || [];
+                    if (hiddenFor.includes(currentUser)) {
+                        if (msgDiv) msgDiv.remove();
+                        return;
+                    }
+                    if (msgDiv) renderMessageContent(msgDiv, data);
                 }
             });
 
@@ -257,7 +241,6 @@
                 let msgId = snapshot.key;
                 delete liveMessages[msgId];
                 localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
-                
                 let el = document.getElementById("msg_" + msgId);
                 if (el) el.remove();
             });
@@ -287,7 +270,6 @@
 
             msgDiv.onclick = () => {
                 selectedMessageId = msgId;
-                selectedMessageSender = data.sender;
                 document.getElementById("deleteEveryoneBtn").style.display = (data.sender === currentUser) ? "block" : "none";
                 document.getElementById("actionModal").style.display = "flex";
             };
@@ -331,14 +313,13 @@
             let chatId = [currentUser, currentChatUser].sort().join("_");
             let newMsgRef = push(ref(db, 'chats/' + chatId));
             
-            let msgData = {
+            set(newMsgRef, {
                 sender: currentUser,
                 text: textVal,
                 type: "text",
                 timestamp: Date.now()
-            };
+            });
 
-            set(newMsgRef, msgData);
             msgInput.value = "";
         };
 
@@ -350,14 +331,12 @@
                     let chatId = [currentUser, currentChatUser].sort().join("_");
                     let newMsgRef = push(ref(db, 'chats/' + chatId));
                     
-                    let msgData = {
+                    set(newMsgRef, {
                         sender: currentUser,
                         text: e.target.result,
                         type: type,
                         timestamp: Date.now()
-                    };
-
-                    set(newMsgRef, msgData);
+                    });
                     input.value = ""; 
                 };
                 reader.readAsDataURL(file);
@@ -377,10 +356,8 @@
         window.addReaction = function(emoji) {
             if (!selectedMessageId) return;
             let chatId = [currentUser, currentChatUser].sort().join("_");
-            let msgRef = ref(db, `chats/${chatId}/${selectedMessageId}/reactions`);
-            
             let userKey = currentUser.replace(/[.#$\/\[\]]/g, "_");
-            update(msgRef, { [userKey]: emoji });
+            update(ref(db, `chats/${chatId}/${selectedMessageId}/reactions`), { [userKey]: emoji });
             document.getElementById("actionModal").style.display = "none";
         };
 
@@ -399,7 +376,6 @@
                     }
                 }
             }).catch(() => {
-                // تحديث محلي لو النت قاطع
                 let localCacheKey = "maro_chat_cache_" + chatId;
                 let cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || "{}");
                 if (cachedMessages[selectedMessageId]) {
@@ -413,9 +389,11 @@
         };
 
         window.deleteMessageForEveryone = function() {
-            if (!selectedMessageId) return;
-            let chatId = [currentUser, currentChatUser].sort().join("_");
-            remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
+            if (!selectedName || !selectedMessageId) {
+                // الحذف الفوري للطرفين
+                let chatId = [currentUser, currentChatUser].sort().join("_");
+                remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
+            }
             document.getElementById("actionModal").style.display = "none";
         };
     </script>
