@@ -7,37 +7,44 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
-        body { background: #0f172a; color: #fff; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .app-container { width: 100%; max-width: 450px; height: 100%; background: #1e293b; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: #0f172a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #334155; }
+        body { background: #05050a; color: #00ffcc; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .app-container { width: 100%; max-width: 450px; height: 100%; background: #0b0c15; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(0, 255, 204, 0.2); box-shadow: 0 0 20px rgba(0, 255, 204, 0.1); }
+        
+        .header { background: #0f1020; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00ffcc; color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.6); }
         .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; display: none; }
         .screen.active { display: flex; }
         
-        .auth-box { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 15px; }
-        .auth-box input { padding: 12px; border-radius: 6px; border: none; background: #334155; color: white; font-size: 16px; outline: none; }
-        .auth-box button { padding: 12px; background: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .auth-box { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 20px; }
+        .auth-box h2 { color: #00ffcc; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+        .auth-box input { padding: 14px; border-radius: 8px; border: 1px solid #00ffcc; background: #131425; color: #fff; font-size: 16px; outline: none; box-shadow: inset 0 0 8px rgba(0, 255, 204, 0.2); }
+        .auth-box button { padding: 14px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); }
 
-        .users-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .user-item { background: #334155; padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .user-item:active { background: #475569; }
+        .users-list { flex: 1; overflow-y: auto; padding: 15px; }
+        .user-item { background: #131425; border: 1px solid rgba(0, 255, 204, 0.3); padding: 15px; margin-bottom: 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 0 10px rgba(0, 255, 204, 0.05); transition: 0.3s; }
+        .user-item:active { background: #1b1c35; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
 
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { max-width: 75%; padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
-        .message.sent { background: #22c55e; color: white; align-self: flex-end; border-bottom-left-radius: 2px; }
-        .message.received { background: #334155; color: white; align-self: flex-start; border-bottom-right-radius: 2px; }
-        .message .sender-name { font-size: 10px; opacity: 0.8; margin-bottom: 3px; }
-        .message img, .message video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
-        .message audio { max-width: 100%; margin-top: 5px; }
-        .message-info { font-size: 9px; align-self: flex-end; opacity: 0.7; margin-top: 4px; display: flex; gap: 4px; }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #07080f; }
+        .message { max-width: 75%; padding: 12px 16px; border-radius: 12px; word-wrap: break-word; font-size: 14px; display: flex; flex-direction: column; position: relative; }
         
-        .chat-input-area { display: flex; padding: 10px; background: #0f172a; border-top: 1px solid #334155; gap: 6px; align-items: center; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: none; background: #334155; color: white; border-radius: 6px; outline: none; font-size: 14px; }
-        .media-btn { background: #334155; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; color: white; display: flex; align-items: center; justify-content: center; min-width: 36px; }
-        .media-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
-        .chat-input-area button.send-btn { background: #22c55e; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .back-btn { background: transparent; border: none; color: #38bdf8; font-size: 14px; cursor: pointer; text-align: right; padding: 10px; }
+        .message.sent { background: linear-gradient(135deg, #00bfff, #00ffcc); color: #05050a; align-self: flex-end; border-bottom-left-radius: 2px; box-shadow: 0 0 12px rgba(0, 255, 204, 0.4); font-weight: 500; }
+        .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); box-shadow: 0 0 10px rgba(0, 191, 255, 0.1); }
+        
+        .message .sender-name { font-size: 10px; opacity: 0.9; margin-bottom: 4px; font-weight: bold; }
+        .message img, .message video { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
+        .message audio { max-width: 100%; margin-top: 5px; }
+        .message-info { font-size: 9px; align-self: flex-end; opacity: 0.8; margin-top: 4px; display: flex; gap: 4px; }
+        
+        /* شريط الكتابة السفلي الثابت والمنسق بالنيون */
+        .chat-input-area { display: flex; padding: 12px; background: #0f1020; border-top: 2px solid #00ffcc; gap: 8px; align-items: center; position: relative; width: 100%; z-index: 10; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 12px; border: 1px solid rgba(0, 255, 204, 0.4); background: #131425; color: white; border-radius: 8px; outline: none; font-size: 14px; box-shadow: inset 0 0 5px rgba(0, 255, 204, 0.1); }
+        .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; color: #00ffcc; display: flex; align-items: center; justify-content: center; min-width: 42px; box-shadow: 0 0 8px rgba(0, 255, 204, 0.2); transition: 0.2s; }
+        .media-btn:active { background: #00ffcc; color: #000; }
+        
+        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 12px rgba(0, 255, 204, 0.4); transition: 0.2s; }
+        .chat-input-area button.send-btn:active { transform: scale(0.95); }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 10px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
     </style>
 </head>
 <body>
@@ -46,7 +53,7 @@
         <!-- شاشة تسجيل الدخول -->
         <div id="authScreen" class="screen active">
             <div class="auth-box">
-                <h2 style="text-align: center;">تسجيل دخول مارو شات</h2>
+                <h2>تسجيل دخول مارو شات</h2>
                 <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم (يوزر فريد)...">
                 <button onclick="login()">دخول للتطبيق</button>
             </div>
@@ -67,9 +74,9 @@
             <div class="chat-input-area">
                 <label class="media-btn" title="صورة">📷<input type="file" accept="image/*" style="display: none;" onchange="sendMedia(this, 'image')"></label>
                 <label class="media-btn" title="فيديو">🎥<input type="file" accept="video/*" style="display: none;" onchange="sendMedia(this, 'video')"></label>
-                <button id="micBtn" class="media-btn" title="تسجيل صوت" onclick="toggleRecordVoice()">🎤</button>
+                <label class="media-btn" title="ملف صوتي">🎵<input type="file" accept="audio/*" style="display: none;" onchange="sendMedia(this, 'audio')"></label>
                 
-                <input type="text" id="msgInput" placeholder="اكتب رسالتك...">
+                <input type="text" id="msgInput" placeholder="اكتب رسالتك هنا...">
                 <button class="send-btn" onclick="sendMessage()">إرسال</button>
             </div>
         </div>
@@ -96,9 +103,6 @@
 
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentChatUser = "";
-        let mediaRecorder;
-        let audioChunks = [];
-        let isRecording = false;
 
         window.onload = function() {
             if (currentUser) showUsersScreen();
@@ -243,48 +247,6 @@
                     input.value = ""; 
                 };
                 reader.readAsDataURL(file);
-            }
-        };
-
-        window.toggleRecordVoice = async function() {
-            let micBtn = document.getElementById("micBtn");
-            if (!isRecording) {
-                try {
-                    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
-
-                    mediaRecorder.onstop = () => {
-                        let audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                        let reader = new FileReader();
-                        reader.onload = function(e) {
-                            let chatId = [currentUser, currentChatUser].sort().join("_");
-                            push(ref(db, 'chats/' + chatId), {
-                                sender: currentUser,
-                                text: e.target.result,
-                                type: "audio",
-                                timestamp: Date.now()
-                            });
-                        };
-                        reader.readAsDataURL(audioBlob);
-                    };
-
-                    mediaRecorder.start();
-                    isRecording = true;
-                    micBtn.classList.add("recording");
-                    micBtn.innerText = "⏹";
-                } catch (err) {
-                    alert("برجاء السماح للتطبيق بالوصول للميكروفون من إعدادات الهاتف.");
-                }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                micBtn.classList.remove("recording");
-                micBtn.innerText = "🎤";
             }
         };
     </script>
