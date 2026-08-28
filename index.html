@@ -31,13 +31,14 @@
         .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); }
         
         .message .sender-name { font-size: 10px; opacity: 0.9; margin-bottom: 4px; font-weight: bold; }
-        .message img, .message video { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
+        .message img { max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
+        .message video { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 5px; }
         .message audio { max-width: 100%; margin-top: 5px; }
         
         .message-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 9px; opacity: 0.8; gap: 10px; }
         .reactions-container { display: flex; gap: 3px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 12px; margin-top: 4px; width: fit-content; }
 
-        /* منطقة الإدخال العمودية المنظمة */
+        /* منطقة الإدخال العمودية المنظمة وزر الإرسال البارز */
         .chat-input-area { background: #0f1020; border-top: 2px solid #00ffcc; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
         
         .media-toolbar { display: flex; gap: 8px; justify-content: flex-start; border-bottom: 1px solid rgba(0, 255, 204, 0.15); padding-bottom: 8px; }
@@ -45,7 +46,7 @@
         
         .input-row { display: flex; gap: 8px; align-items: center; width: 100%; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px; border: 1px solid rgba(0, 255, 204, 0.4); background: #131425; color: white; border-radius: 8px; outline: none; font-size: 14px; }
-        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); white-space: nowrap; }
+        .chat-input-area button.send-btn { background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); white-space: nowrap; }
 
         .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 8px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
 
@@ -116,7 +117,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, get, push, onChildAdded, remove, update, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, push, onChildAdded, remove, update, onChildChanged, onChildRemoved, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -153,7 +154,6 @@
             currentUser = uInput;
             localStorage.setItem("maro_chat_user", currentUser);
 
-            // حفظ اليوزر في قاعدة البيانات في الخلفية بدون ما يعطل الدخول
             try {
                 set(ref(db, 'users/' + currentUser), { username: currentUser, joined: Date.now() });
             } catch(e) {}
@@ -172,7 +172,6 @@
             let listDiv = document.getElementById("usersList");
             let usersRef = ref(db, 'users');
             
-            // إضافة يوزر افتراضي كمثال لو القائمة فاضية
             listDiv.innerHTML = "<div class='user-item' onclick=\"openChat('مازن')\"><span>مازن</span> 💬</div>";
 
             get(usersRef).then((snapshot) => {
@@ -202,20 +201,15 @@
             messagesList.innerHTML = "";
             
             let chatId = [currentUser, targetUser].sort().join("_");
-            let localCacheKey = "maro_chat_cache_" + chatId;
-            let cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || "{}");
-            
-            renderMessagesMap(cachedMessages, messagesList);
+            let chatRef = query(ref(db, 'chats/' + chatId), limitToLast(30)); // سحب آخر 30 رسالة فقط لتوفير النت والسرعة
 
-            let chatRef = ref(db, 'chats/' + chatId);
-            let liveMessages = {...cachedMessages};
+            // تنظيف أي استماع قديم لمنع التكرار
+            messagesList.innerHTML = "";
 
             onChildAdded(chatRef, (snapshot) => {
                 let data = snapshot.val();
                 let msgId = snapshot.key;
-                if (data) {
-                    liveMessages[msgId] = data;
-                    localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
+                if (data && !document.getElementById("msg_" + msgId)) {
                     appendSingleMessage(msgId, data, messagesList);
                 }
             });
@@ -223,11 +217,8 @@
             onChildChanged(chatRef, (snapshot) => {
                 let data = snapshot.val();
                 let msgId = snapshot.key;
+                let msgDiv = document.getElementById("msg_" + msgId);
                 if (data) {
-                    liveMessages[msgId] = data;
-                    localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
-                    
-                    let msgDiv = document.getElementById("msg_" + msgId);
                     let hiddenFor = data.hiddenFor || [];
                     if (hiddenFor.includes(currentUser)) {
                         if (msgDiv) msgDiv.remove();
@@ -239,26 +230,15 @@
 
             onChildRemoved(chatRef, (snapshot) => {
                 let msgId = snapshot.key;
-                delete liveMessages[msgId];
-                localStorage.setItem(localCacheKey, JSON.stringify(liveMessages));
                 let el = document.getElementById("msg_" + msgId);
                 if (el) el.remove();
             });
         };
 
-        function renderMessagesMap(messagesObj, container) {
-            container.innerHTML = "";
-            Object.keys(messagesObj).forEach(msgId => {
-                let data = messagesObj[msgId];
-                let hiddenFor = data.hiddenFor || [];
-                if (!hiddenFor.includes(currentUser)) {
-                    appendSingleMessage(msgId, data, container);
-                }
-            });
-            container.scrollTop = container.scrollHeight;
-        }
-
         function appendSingleMessage(msgId, data, container) {
+            let hiddenFor = data.hiddenFor || [];
+            if (hiddenFor.includes(currentUser)) return;
+
             let existing = document.getElementById("msg_" + msgId);
             if (existing) existing.remove();
 
@@ -354,7 +334,7 @@
         };
 
         window.addReaction = function(emoji) {
-            if (!selectedMessageId) return;
+            if (!selectedMessageId || !currentChatUser) return;
             let chatId = [currentUser, currentChatUser].sort().join("_");
             let userKey = currentUser.replace(/[.#$\/\[\]]/g, "_");
             update(ref(db, `chats/${chatId}/${selectedMessageId}/reactions`), { [userKey]: emoji });
@@ -362,7 +342,7 @@
         };
 
         window.deleteMessageForMe = function() {
-            if (!selectedMessageId) return;
+            if (!selectedMessageId || !currentChatUser) return;
             let chatId = [currentUser, currentChatUser].sort().join("_");
             let msgRef = ref(db, `chats/${chatId}/${selectedMessageId}`);
             
@@ -375,28 +355,16 @@
                         update(msgRef, { hiddenFor: hiddenFor });
                     }
                 }
-            }).catch(() => {
-                let localCacheKey = "maro_chat_cache_" + chatId;
-                let cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || "{}");
-                if (cachedMessages[selectedMessageId]) {
-                    if (!cachedMessages[selectedMessageId].hiddenFor) cachedMessages[selectedMessageId].hiddenFor = [];
-                    cachedMessages[selectedMessageId].hiddenFor.push(currentUser);
-                    localStorage.setItem(localCacheKey, JSON.stringify(cachedMessages));
-                    renderMessagesMap(cachedMessages, document.getElementById("messagesList"));
-                }
             });
             document.getElementById("actionModal").style.display = "none";
         };
 
         window.deleteMessageForEveryone = function() {
-            if (!selectedName || !selectedMessageId) {
-                // الحذف الفوري للطرفين
-                let chatId = [currentUser, currentChatUser].sort().join("_");
-                remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
-            }
+            if (!selectedMessageId || !currentChatUser) return;
+            let chatId = [currentUser, currentChatUser].sort().join("_");
+            remove(ref(db, `chats/${chatId}/${selectedMessageId}`));
             document.getElementById("actionModal").style.display = "none";
         };
     </script>
 </body>
 </html>
-
