@@ -31,16 +31,17 @@
         .message.received { background: #131425; color: #fff; align-self: flex-start; border-bottom-right-radius: 2px; border: 1px solid rgba(0, 191, 255, 0.3); }
         
         .message .sender-name { font-size: 10px; opacity: 0.9; margin-bottom: 4px; font-weight: bold; }
-        .message img { max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
-        .message video { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 5px; }
+        
+        /* تحسين استهلاك النت للصور: تظهر كزر معاينة أولاً لتوفير الباقة */
+        .media-placeholder { background: rgba(0,255,204,0.1); border: 1px dashed #00ffcc; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 12px; color: #00ffcc; }
+        .message img { max-width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); display: block; }
+        .message video { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 5px; display: block; }
         .message audio { max-width: 100%; margin-top: 5px; }
         
         .message-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 9px; opacity: 0.8; gap: 10px; }
         .reactions-container { display: flex; gap: 3px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 12px; margin-top: 4px; width: fit-content; }
 
-        /* منطقة الإدخال العمودية المنظمة وزر الإرسال البارز */
         .chat-input-area { background: #0f1020; border-top: 2px solid #00ffcc; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
-        
         .media-toolbar { display: flex; gap: 8px; justify-content: flex-start; border-bottom: 1px solid rgba(0, 255, 204, 0.15); padding-bottom: 8px; }
         .media-btn { background: #131425; border: 1px solid #00ffcc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #00ffcc; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 5px rgba(0, 255, 204, 0.2); }
         
@@ -50,7 +51,6 @@
 
         .back-btn { background: transparent; border: none; color: #00ffcc; font-size: 14px; cursor: pointer; text-align: right; padding: 8px; font-weight: bold; text-shadow: 0 0 5px rgba(0, 255, 204, 0.4); }
 
-        /* نافذة الخيارات المنبثقة */
         #actionModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: #131425; border: 1px solid #00ffcc; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); }
         .modal-content button { padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
@@ -201,9 +201,8 @@
             messagesList.innerHTML = "";
             
             let chatId = [currentUser, targetUser].sort().join("_");
-            let chatRef = query(ref(db, 'chats/' + chatId), limitToLast(30)); // سحب آخر 30 رسالة فقط لتوفير النت والسرعة
+            let chatRef = query(ref(db, 'chats/' + chatId), limitToLast(20)); // تقليل لآخر 20 رسالة فقط لتوفير الباقة تماماً
 
-            // تنظيف أي استماع قديم لمنع التكرار
             messagesList.innerHTML = "";
 
             onChildAdded(chatRef, (snapshot) => {
@@ -224,7 +223,7 @@
                         if (msgDiv) msgDiv.remove();
                         return;
                     }
-                    if (msgDiv) renderMessageContent(msgDiv, data);
+                    if (msgDiv) renderMessageContent(msgDiv, data, msgId);
                 }
             });
 
@@ -246,7 +245,7 @@
             msgDiv.className = "message " + (data.sender === currentUser ? "sent" : "received");
             msgDiv.id = "msg_" + msgId;
             
-            renderMessageContent(msgDiv, data);
+            renderMessageContent(msgDiv, data, msgId);
 
             msgDiv.onclick = () => {
                 selectedMessageId = msgId;
@@ -258,12 +257,14 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        function renderMessageContent(msgDiv, data) {
+        function renderMessageContent(msgDiv, data, msgId) {
             let contentHTML = `<span class="sender-name">${data.sender}</span>`;
+            
+            // جعل الصور والفيديوهات لا تُحمل تلقائياً إلا بضغط المستخدم لتوفير النت
             if (data.type === "image") {
-                contentHTML += `<img src="${data.text}" alt="image">`;
+                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'image', '${data.text}')">📷 اضغط لتحميل الصورة (توفير للنت)</div>`;
             } else if (data.type === "video") {
-                contentHTML += `<video controls src="${data.text}"></video>`;
+                contentHTML += `<div class="media-placeholder" id="media_${msgId}" onclick="loadMedia(event, '${msgId}', 'video', '${data.text}')">🎥 اضغط لتحميل الفيديو (توفير للنت)</div>`;
             } else if (data.type === "audio") {
                 contentHTML += `<audio controls src="${data.text}"></audio>`;
             } else {
@@ -278,6 +279,18 @@
             contentHTML += `<div class="message-footer"><span>✓✓</span></div>`;
             msgDiv.innerHTML = contentHTML;
         }
+
+        window.loadMedia = function(event, msgId, type, url) {
+            event.stopPropagation();
+            let container = document.getElementById("media_" + msgId);
+            if (!container) return;
+            
+            if (type === "image") {
+                container.outerHTML = `<img src="${url}" alt="image">`;
+            } else if (type === "video") {
+                container.outerHTML = `<video controls autoplay src="${url}"></video>`;
+            }
+        };
 
         window.goBackToUsers = function() {
             document.getElementById("chatScreen").classList.remove("active");
