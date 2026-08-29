@@ -15,15 +15,15 @@
         .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; display: none; }
         .screen.active { display: flex; }
         
-        .auth-box { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 15px; overflow-y: auto; }
-        .auth-box h2 { color: #00ffcc; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
-        .auth-box input[type="text"], .auth-box input[type="password"] { padding: 14px; border-radius: 8px; border: 1px solid #00ffcc; background: #131425; color: #fff; font-size: 16px; outline: none; }
-        .auth-box button { padding: 14px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .auth-box { padding: 25px; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 12px; overflow-y: auto; }
+        .auth-box h2 { color: #00ffcc; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); margin-bottom: 5px; }
+        .auth-box input[type="text"], .auth-box input[type="password"] { padding: 12px; border-radius: 8px; border: 1px solid #00ffcc; background: #131425; color: #fff; font-size: 15px; outline: none; }
+        .auth-box button { padding: 12px; background: linear-gradient(45deg, #00ffcc, #0077ff); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; }
 
-        .profile-pic-upload { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .profile-preview { width: 80px; height: 80px; border-radius: 50%; border: 2px dashed #00ffcc; background: #131425; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: pointer; position: relative; }
+        .profile-pic-upload { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 5px; }
+        .profile-preview { width: 75px; height: 75px; border-radius: 50%; border: 2px dashed #00ffcc; background: #131425; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: pointer; position: relative; }
         .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .profile-preview span { font-size: 11px; color: #00ffcc; text-align: center; padding: 5px; }
+        .profile-preview span { font-size: 10px; color: #00ffcc; text-align: center; padding: 4px; }
 
         .tabs { display: flex; background: #0f1020; border-bottom: 1px solid rgba(0,255,204,0.2); }
         .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: #888; font-weight: bold; cursor: pointer; font-size: 13px; }
@@ -71,13 +71,14 @@
         .modal-content { background: #131425; border: 1px solid #00ffcc; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
         .modal-content button { padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
         .react-picker { display: flex; justify-content: space-around; font-size: 20px; padding: 5px 0; background: #0b0c15; border-radius: 6px; border: 1px solid rgba(0,255,204,0.2); }
-        .profile-settings-btn { background: #1f2937; color: #00ffcc; border: 1px solid #00ffcc; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: auto; }
+        .profile-settings-btn { background: #1f2937; color: #00ffcc; border: 1px solid #00ffcc; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+        .logout-btn { background: #7f1d1d; color: #ffcccc; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <!-- شاشة تسجيل الدخول -->
+        <!-- شاشة تسجيل الدخول / إنشاء حساب -->
         <div id="authScreen" class="screen active">
             <div class="auth-box">
                 <h2>تسجيل دخول مارو شات</h2>
@@ -85,16 +86,14 @@
                 <div class="profile-pic-upload">
                     <div class="profile-preview" onclick="document.getElementById('profilePicInput').click()">
                         <img id="profilePreviewImg" src="" alt="" style="display:none;">
-                        <span id="profilePlaceholderText">اختر صورتك الشخصية</span>
+                        <span id="profilePlaceholderText">صورة شخصية</span>
                     </div>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfilePic(this)">
                 </div>
 
-                <input type="text" id="usernameInput" placeholder="اكتب اسم المستخدم (اليوزر)..." oninput="checkAdminNameInput()">
-                <div id="adminPasswordContainer" style="display: none;">
-                    <input type="password" id="adminPasswordInput" placeholder="اكتب باسورد الآدمن السرّي...">
-                </div>
-                <button onclick="login()">دخول للتطبيق</button>
+                <input type="text" id="usernameInput" placeholder="اسم المستخدم (اليوزر)...">
+                <input type="password" id="passwordInput" placeholder="كلمة المرور (الباسورد)...">
+                <button onclick="loginOrRegister()">دخول / تسسجيل جديد</button>
             </div>
         </div>
 
@@ -104,6 +103,7 @@
                 <span id="welcomeTitle">الدردشة</span>
                 <div style="display:flex; gap:5px; align-items:center;">
                     <button class="profile-settings-btn" onclick="openProfileEdit()">حسابي ⚙️</button>
+                    <button class="logout-btn" onclick="logout()">خروج 🚪</button>
                     <span id="adminBadgeContainer"></span>
                 </div>
             </div>
@@ -197,7 +197,7 @@
                 </div>
                 <input type="file" id="editPicInput" accept="image/*" style="display:none;" onchange="previewEditPic(this)">
             </div>
-            <button style="background:#00ffcc; color:#000;" onclick="saveProfileChanges()">حفظ التعديلات</button>
+            <button style="background:#00ffcc; color:#000;" onclick="saveProfileChanges()">حفظ الصورة الجديدة</button>
             <button style="background:#334155; color:white;" onclick="closeModalDirect('profileEditModal')">إلغاء</button>
         </div>
     </div>
@@ -221,15 +221,11 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // تفعيل التخزين المؤقت للعمل بدون إنترنت
         try {
-            enableIndexedDbPersistence(db).catch((err) => {
-                console.log("Persistence offline error: ", err.code);
-            });
+            enableIndexedDbPersistence(db).catch((err) => {});
         } catch(e) {}
 
         const MASTER_ADMIN = "MaroAdmin";
-        const ADMIN_SECRET_PASS = "maro01103393855maro"; 
 
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentAvatar = localStorage.getItem("maro_chat_avatar") || "";
@@ -272,75 +268,66 @@
             }
         };
 
-        window.checkAdminNameInput = function() {
+        window.loginOrRegister = function() {
             let uInput = document.getElementById("usernameInput").value.trim();
-            let passBox = document.getElementById("adminPasswordContainer");
-            if (uInput === MASTER_ADMIN) {
-                passBox.style.display = "block";
-            } else {
-                passBox.style.display = "none";
-            }
-        };
+            let pInput = document.getElementById("passwordInput").value.trim();
 
-        window.login = function() {
-            let uInput = document.getElementById("usernameInput").value.trim();
-            if (!uInput) {
-                alert("برجاء إدخال اسم المستخدم");
+            if (!uInput || !pInput) {
+                alert("برجاء إدخال اسم المستخدم وكلمة المرور!");
                 return;
             }
 
-            if (uInput === MASTER_ADMIN) {
-                let pInput = document.getElementById("adminPasswordInput").value;
-                if (pInput !== ADMIN_SECRET_PASS) {
-                    alert("كلمة مرور الآدمن غير صحيحة!");
+            let userRef = ref(db, 'users/' + uInput);
+            get(userRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    // المستخدم مسجل مسبقاً، نتحقق من الباسورد
+                    let userData = snapshot.val();
+                    if (userData.password !== pInput) {
+                        alert("كلمة المرور غير صحيحة لهذا المستخدم!");
+                        return;
+                    }
+                    currentAvatar = userData.avatar || "https://via.placeholder.com/80";
+                    completeLogin(uInput);
+                } else {
+                    // يوزر جديد تماماً يتم إنشاؤه لأول مرة بالباسورد الذي اختاره
+                    let newAvatar = tempAvatarBase64 || "https://via.placeholder.com/80";
+                    let newUserData = {
+                        username: uInput,
+                        password: pInput,
+                        avatar: newAvatar,
+                        joined: Date.now()
+                    };
+                    set(userRef, newUserData).then(() => {
+                        currentAvatar = newAvatar;
+                        completeLogin(uInput);
+                    });
+                }
+            }).catch(() => {
+                // وضع عدم الاتصال (Offline) في حال تم التسجيل مسبقاً ومحفوظ محلياً
+                completeLogin(uInput);
+            });
+        };
+
+        function completeLogin(uname) {
+            get(ref(db, 'bans/' + uname)).then((banSnap) => {
+                if (banSnap.exists() && banSnap.val() === true) {
+                    alert("عذراً، أنت محظور من استخدام التطبيق!");
                     return;
                 }
-            }
 
-            // التحقق من أن اليوزر غير مستخدم من شخص آخر
-            get(ref(db, 'users/' + uInput)).then((snapshot) => {
-                if (snapshot.exists() && uInput !== MASTER_ADMIN && currentUser !== uInput) {
-                    // تحقق إذا كان اسم المستخدم مسجل مسبقاً لشخص آخر
-                    // لكن إذا كان المستخدم الحالي يعيد تسجيل دخوله بنفس اسمه المسموح
-                    let storedSavedUser = localStorage.getItem("maro_chat_user");
-                    if (storedSavedUser !== uInput) {
-                        alert("عذراً، اسم المستخدم هذا محجوز ومستخدم من شخص آخر. اختر اسماً آخر!");
-                        return;
-                    }
-                }
-
-                get(ref(db, 'bans/' + uInput)).then((banSnap) => {
-                    if (banSnap.exists() && banSnap.val() === true) {
-                        alert("عذراً، أنت محظور من استخدام التطبيق!");
-                        return;
-                    }
-
-                    currentUser = uInput;
-                    if (tempAvatarBase64) {
-                        currentAvatar = tempAvatarBase64;
-                    } else if (!currentAvatar) {
-                        currentAvatar = "https://via.placeholder.com/80";
-                    }
-                    localStorage.setItem("maro_chat_avatar", currentAvatar);
-                    localStorage.setItem("maro_chat_user", currentUser);
-
-                    set(ref(db, 'users/' + currentUser), { 
-                        username: currentUser, 
-                        avatar: currentAvatar,
-                        joined: Date.now() 
-                    });
-                    showUsersScreen();
-                });
-            }).catch(() => {
-                // في حالة انقطاع النت تماماً اثناء التسجيل لأول مرة
-                if(!currentUser) {
-                    currentUser = uInput;
-                    if(tempAvatarBase64) currentAvatar = tempAvatarBase64;
-                    localStorage.setItem("maro_chat_user", currentUser);
-                    localStorage.setItem("maro_chat_avatar", currentAvatar);
-                }
+                currentUser = uname;
+                localStorage.setItem("maro_chat_user", currentUser);
+                localStorage.setItem("maro_chat_avatar", currentAvatar);
                 showUsersScreen();
             });
+        }
+
+        window.logout = function() {
+            if (confirm("هل تريد تسجيل الخروج؟")) {
+                localStorage.removeItem("maro_chat_user");
+                localStorage.removeItem("maro_chat_avatar");
+                location.reload();
+            }
         };
 
         function checkBanAndProceed() {
@@ -353,7 +340,6 @@
                 }
                 showUsersScreen();
             }).catch(() => {
-                // لو النت مقطوع، ادخل فوراً بناءً على الحفظ المحلي
                 showUsersScreen();
             });
         }
@@ -404,7 +390,6 @@
             let isAdm = (currentUser === MASTER_ADMIN);
 
             if (activeTab === 'users') {
-                // تحميل الأصدقاء المضافين فقط أو المحادثات الخاصة بالمستخدم الحالي
                 let myContactsRef = ref(db, 'contacts/' + currentUser);
                 get(myContactsRef).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -433,10 +418,9 @@
                         listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق) وابحث باليوزر الصحيح!</div>";
                     }
                 }).catch(() => {
-                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>وضع عدم الاتصال: تعذر جلب قائمة الأصدقاء الحديثة.</div>";
+                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>وضع عدم الاتصال: تعذر جلب قائمة الأصدقاء.</div>";
                 });
             } else if (activeTab === 'groups') {
-                // جلب الجروبات التي ينتمي إليها المستخدم فقط
                 get(ref(db, 'groups')).then((snapshot) => {
                     if (snapshot.exists()) {
                         let foundAny = false;
@@ -444,7 +428,6 @@
                             let gName = childSnap.key;
                             let gData = childSnap.val();
                             let members = gData.members || {};
-                            // إذا كان هو المنشئ أو عضواً مضافاً
                             if (gData.creator === currentUser || members[currentUser]) {
                                 foundAny = true;
                                 let div = document.createElement("div");
@@ -467,7 +450,6 @@
                     }
                 });
             } else if (activeTab === 'bans' && isAdm) {
-                // شاشة المحظورين للآدمن مع زر رفع الحظر
                 get(ref(db, 'bans')).then((snapshot) => {
                     if (snapshot.exists()) {
                         let hasBans = false;
@@ -505,14 +487,12 @@
                 return;
             }
 
-            // التأكد من أن المستخدم موجود في النظام أصلاً
             get(ref(db, 'users/' + targetUser)).then((snapshot) => {
                 if (!snapshot.exists()) {
                     alert("خطأ: اليوزر غير موجود أو تم كتابته بشكل خاطئ!");
                     return;
                 }
 
-                // إضافته لقائمة اتصالات المستخدم الحالي
                 set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true).then(() => {
                     alert("تم إضافة الصديق بنجاح لقائمة محادثاتك!");
                     document.getElementById('addFriendModal').style.display = 'none';
@@ -550,7 +530,7 @@
                 created: Date.now(),
                 members: {}
             };
-            groupData.members[currentUser] = true; // المنشئ عضو أساسي
+            groupData.members[currentUser] = true;
 
             set(ref(db, 'groups/' + gName + '/info'), groupData).then(() => {
                 document.getElementById('groupModal').style.display = 'none';
@@ -567,7 +547,6 @@
             let extraHeader = document.getElementById("chatHeaderExtra");
             extraHeader.innerHTML = "";
             if (isGroup) {
-                // التحقق إذا كان المستخدم الحالي هو منشئ الجروب ليظهر له زر إدارة الأعضاء
                 get(ref(db, 'groups/' + target + '/info/creator')).then((snap) => {
                     if (snap.exists() && snap.val() === currentUser) {
                         extraHeader.innerHTML = `<button class="action-btn-green" style="font-size:11px; padding:4px 8px;" onclick="openGroupManager('${target}')">الأعضاء ⚙️</button>`;
@@ -828,3 +807,4 @@
     </script>
 </body>
 </html>
+
