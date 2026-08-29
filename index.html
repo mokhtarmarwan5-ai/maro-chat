@@ -93,7 +93,7 @@
 
                 <input type="text" id="usernameInput" placeholder="اسم المستخدم (اليوزر)...">
                 <input type="password" id="passwordInput" placeholder="كلمة المرور (الباسورد)...">
-                <button onclick="loginOrRegister()">دخول / تسسجيل جديد</button>
+                <button onclick="loginOrRegister()">دخول / تسجيل جديد</button>
             </div>
         </div>
 
@@ -110,7 +110,7 @@
             <div class="tabs">
                 <button class="tab-btn active" id="tabUsers" onclick="switchTab('users')">المحادثات</button>
                 <button class="tab-btn" id="tabGroups" onclick="switchTab('groups')">الجروبات</button>
-                <button class="tab-btn" id="tabBans" id="tabBansBtn" style="display:none;" onclick="switchTab('bans')">المحظورين</button>
+                <button class="tab-btn" id="tabBansBtn" style="display:none;" onclick="switchTab('bans')">المحظورين</button>
             </div>
             <div id="mainList" class="list-section"></div>
             <button class="floating-action-btn" id="floatingBtn" onclick="floatingAction()">+ إضافة صديق</button>
@@ -280,16 +280,14 @@
             let userRef = ref(db, 'users/' + uInput);
             get(userRef).then((snapshot) => {
                 if (snapshot.exists()) {
-                    // المستخدم مسجل مسبقاً، نتحقق من الباسورد
                     let userData = snapshot.val();
-                    if (userData.password !== pInput) {
+                    if (userData.password && userData.password !== pInput) {
                         alert("كلمة المرور غير صحيحة لهذا المستخدم!");
                         return;
                     }
                     currentAvatar = userData.avatar || "https://via.placeholder.com/80";
                     completeLogin(uInput);
                 } else {
-                    // يوزر جديد تماماً يتم إنشاؤه لأول مرة بالباسورد الذي اختاره
                     let newAvatar = tempAvatarBase64 || "https://via.placeholder.com/80";
                     let newUserData = {
                         username: uInput,
@@ -300,26 +298,25 @@
                     set(userRef, newUserData).then(() => {
                         currentAvatar = newAvatar;
                         completeLogin(uInput);
+                    }).catch(() => {
+                        completeLogin(uInput); // السماح بالدخول حتى لو النت قاطع لو كان تسجيل محلي
                     });
                 }
             }).catch(() => {
-                // وضع عدم الاتصال (Offline) في حال تم التسجيل مسبقاً ومحفوظ محلياً
-                completeLogin(uInput);
+                // وضع الأوفلاين عند تسجيل الدخول لو الحساب متسجل قبل كده ع الجهاز
+                if(currentUser === uInput || localStorage.getItem("maro_chat_user") === uInput) {
+                    completeLogin(uInput);
+                } else {
+                    alert("لا يمكن التسجيل بحساب جديد بدون اتصال بالإنترنت!");
+                }
             });
         };
 
         function completeLogin(uname) {
-            get(ref(db, 'bans/' + uname)).then((banSnap) => {
-                if (banSnap.exists() && banSnap.val() === true) {
-                    alert("عذراً، أنت محظور من استخدام التطبيق!");
-                    return;
-                }
-
-                currentUser = uname;
-                localStorage.setItem("maro_chat_user", currentUser);
-                localStorage.setItem("maro_chat_avatar", currentAvatar);
-                showUsersScreen();
-            });
+            currentUser = uname;
+            localStorage.setItem("maro_chat_user", currentUser);
+            localStorage.setItem("maro_chat_avatar", currentAvatar);
+            showUsersScreen();
         }
 
         window.logout = function() {
@@ -395,30 +392,21 @@
                     if (snapshot.exists()) {
                         let contacts = snapshot.val();
                         Object.keys(contacts).forEach((friendName) => {
-                            get(ref(db, 'users/' + friendName)).then((userSnap) => {
-                                let uAvatar = 'https://via.placeholder.com/40';
-                                if(userSnap.exists() && userSnap.val().avatar) {
-                                    uAvatar = userSnap.val().avatar;
-                                }
-                                let div = document.createElement("div");
-                                div.className = "item-card";
-                                let banBtnHTML = (isAdm && friendName !== MASTER_ADMIN) ? `<button class="action-btn-sm" onclick="banUser(event, '${friendName}')">حظر ⛔</button>` : '';
-                                div.innerHTML = `
-                                    <div class="user-info-area">
-                                        <img src="${uAvatar}" class="user-avatar-sm" alt="">
-                                        <span>💬 ${friendName}</span>
-                                    </div>
-                                    ${banBtnHTML}
-                                `;
-                                div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openChat(friendName, false); };
-                                listDiv.appendChild(div);
-                            });
+                            renderContactItem(friendName, listDiv, isAdm);
                         });
                     } else {
-                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق) وابحث باليوزر الصحيح!</div>";
+                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق)!</div>";
                     }
                 }).catch(() => {
-                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>وضع عدم الاتصال: تعذر جلب قائمة الأصدقاء.</div>";
+                    // استرجاع الأصدقاء من الذاكرة المحلية عند انقطاع النت
+                    let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
+                    if (Object.keys(savedContacts).length > 0) {
+                        Object.keys(savedContacts).forEach((friendName) => {
+                            renderContactItem(friendName, listDiv, isAdm);
+                        });
+                    } else {
+                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا توجد اتصال، ولا توجد جهات اتصال مخزنة مؤقتاً.</div>";
+                    }
                 });
             } else if (activeTab === 'groups') {
                 get(ref(db, 'groups')).then((snapshot) => {
@@ -430,53 +418,67 @@
                             let members = gData.members || {};
                             if (gData.creator === currentUser || members[currentUser]) {
                                 foundAny = true;
-                                let div = document.createElement("div");
-                                div.className = "item-card";
-                                div.innerHTML = `
-                                    <div class="user-info-area">
-                                        <div class="user-avatar-sm" style="display:flex; justify-content:center; align-items:center; background:#131425; font-size:18px;">👥</div>
-                                        <span>جروب: ${gName}</span>
-                                    </div>
-                                `;
-                                div.onclick = () => openChat(gName, true);
-                                listDiv.appendChild(div);
+                                renderGroupItem(gName, listDiv);
                             }
                         });
                         if (!foundAny) {
-                            listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لست منضماً لأي جروب. أنشئ جروباً جديداً أو اطلب من المشرف إضافتك!</div>";
+                            listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لست منضماً لأي جروب.</div>";
                         }
-                    } else {
-                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا توجد جروبات متاحة.</div>";
                     }
+                }).catch(() => {
+                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>وضع عدم الاتصال: تعذر جلب الجروبات.</div>";
                 });
             } else if (activeTab === 'bans' && isAdm) {
                 get(ref(db, 'bans')).then((snapshot) => {
                     if (snapshot.exists()) {
-                        let hasBans = false;
                         snapshot.forEach((childSnap) => {
                             let bUser = childSnap.key;
-                            let isBanned = childSnap.val();
-                            if (isBanned) {
-                                hasBans = true;
+                            if (childSnap.val()) {
                                 let div = document.createElement("div");
                                 div.className = "item-card";
-                                div.innerHTML = `
-                                    <div class="user-info-area">
-                                        <span>⛔ ${bUser}</span>
-                                    </div>
-                                    <button class="action-btn-green" onclick="unbanUser('${bUser}')">رفع الحظر 🔓</button>
-                                `;
+                                div.innerHTML = `<div class="user-info-area"><span>⛔ ${bUser}</span></div><button class="action-btn-green" onclick="unbanUser('${bUser}')">رفع الحظر 🔓</button>`;
                                 listDiv.appendChild(div);
                             }
                         });
-                        if (!hasBans) {
-                            listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا يوجد مستخدمون محظورون حالياً.</div>";
-                        }
-                    } else {
-                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا يوجد مستخدمون محظورون حالياً.</div>";
                     }
                 });
             }
+        }
+
+        function renderContactItem(friendName, listDiv, isAdm) {
+            let div = document.createElement("div");
+            div.className = "item-card";
+            let banBtnHTML = (isAdm && friendName !== MASTER_ADMIN) ? `<button class="action-btn-sm" onclick="banUser(event, '${friendName}')">حظر ⛔</button>` : '';
+            div.innerHTML = `
+                <div class="user-info-area">
+                    <img src="https://via.placeholder.com/40" class="user-avatar-sm" id="avatar_${friendName}" alt="">
+                    <span>💬 ${friendName}</span>
+                </div>
+                ${banBtnHTML}
+            `;
+            div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openChat(friendName, false); };
+            listDiv.appendChild(div);
+
+            // جلب الأفاتار
+            get(ref(db, 'users/' + friendName)).then((userSnap) => {
+                if(userSnap.exists() && userSnap.val().avatar) {
+                    let imgEl = document.getElementById("avatar_" + friendName);
+                    if(imgEl) imgEl.src = userSnap.val().avatar;
+                }
+            }).catch(()=>{});
+        }
+
+        function renderGroupItem(gName, listDiv) {
+            let div = document.createElement("div");
+            div.className = "item-card";
+            div.innerHTML = `
+                <div class="user-info-area">
+                    <div class="user-avatar-sm" style="display:flex; justify-content:center; align-items:center; background:#131425; font-size:18px;">👥</div>
+                    <span>جروب: ${gName}</span>
+                </div>
+            `;
+            div.onclick = () => openChat(gName, true);
+            listDiv.appendChild(div);
         }
 
         window.addFriendByUsername = function() {
@@ -489,16 +491,23 @@
 
             get(ref(db, 'users/' + targetUser)).then((snapshot) => {
                 if (!snapshot.exists()) {
-                    alert("خطأ: اليوزر غير موجود أو تم كتابته بشكل خاطئ!");
+                    alert("خطأ: اليوزر غير موجود!");
                     return;
                 }
 
                 set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true).then(() => {
-                    alert("تم إضافة الصديق بنجاح لقائمة محادثاتك!");
+                    // حفظ جهة الاتصال محلياً أيضاً
+                    let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
+                    savedContacts[targetUser] = true;
+                    localStorage.setItem("maro_contacts_" + currentUser, JSON.stringify(savedContacts));
+
+                    alert("تم إضافة الصديق بنجاح!");
                     document.getElementById('addFriendModal').style.display = 'none';
                     document.getElementById("targetUsernameInput").value = "";
                     loadMainList();
                 });
+            }).catch(() => {
+                alert("لا يمكن إضافة صديق بدون إنترنت!");
             });
         };
 
@@ -536,6 +545,8 @@
                 document.getElementById('groupModal').style.display = 'none';
                 document.getElementById("groupNameInput").value = "";
                 switchTab('groups');
+            }).catch(()=>{
+                alert("تعذر إنشاء الجروب بدون إنترنت.");
             });
         };
 
@@ -551,7 +562,7 @@
                     if (snap.exists() && snap.val() === currentUser) {
                         extraHeader.innerHTML = `<button class="action-btn-green" style="font-size:11px; padding:4px 8px;" onclick="openGroupManager('${target}')">الأعضاء ⚙️</button>`;
                     }
-                });
+                }).catch(()=>{});
             }
 
             document.getElementById("usersScreen").classList.remove("active");
@@ -559,15 +570,28 @@
             
             let messagesList = document.getElementById("messagesList");
             messagesList.innerHTML = "";
+
+            // 1. تحميل الرسائل المخزنة محلياً (Offline Cache) فوراً وعرضها للمستخدم
+            let storageKey = "maro_msgs_" + (isGroup ? target : [currentUser, target].sort().join("_"));
+            let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
             
+            Object.keys(localMessages).forEach((msgId) => {
+                appendSingleMessage(msgId, localMessages[msgId], messagesList, false);
+            });
+            
+            // 2. جلب وتحديث الرسائل من قاعدة البيانات (Firebase)
             let chatPath = isGroup ? 'groups/' + target + '/messages' : 'chats/' + [currentUser, target].sort().join("_");
-            let chatRef = query(ref(db, chatPath), limitToLast(40));
+            let chatRef = query(ref(db, chatPath), limitToLast(50));
 
             onChildAdded(chatRef, (snapshot) => {
                 let data = snapshot.val();
                 let msgId = snapshot.key;
-                if (data && !document.getElementById("msg_" + msgId)) {
-                    appendSingleMessage(msgId, data, messagesList);
+                if (data) {
+                    // حفظ الرسالة محلياً
+                    localMessages[msgId] = data;
+                    localStorage.setItem(storageKey, JSON.stringify(localMessages));
+                    
+                    appendSingleMessage(msgId, data, messagesList, true);
                 }
             });
 
@@ -576,6 +600,9 @@
                 let msgId = snapshot.key;
                 let msgDiv = document.getElementById("msg_" + msgId);
                 if (data) {
+                    localMessages[msgId] = data;
+                    localStorage.setItem(storageKey, JSON.stringify(localMessages));
+
                     let hiddenFor = data.hiddenFor || [];
                     if (hiddenFor.includes(currentUser)) {
                         if (msgDiv) msgDiv.remove();
@@ -587,6 +614,9 @@
 
             onChildRemoved(chatRef, (snapshot) => {
                 let msgId = snapshot.key;
+                delete localMessages[msgId];
+                localStorage.setItem(storageKey, JSON.stringify(localMessages));
+
                 let el = document.getElementById("msg_" + msgId);
                 if (el) el.remove();
             });
@@ -609,6 +639,8 @@
                         membersDiv.appendChild(row);
                     });
                 }
+            }).catch(()=>{
+                membersDiv.innerHTML = "تعذر تحميل الأعضاء بدون إنترنت.";
             });
         };
 
@@ -626,6 +658,8 @@
                     document.getElementById("memberUsernameInput").value = "";
                     openGroupManager(currentTarget);
                 });
+            }).catch(()=>{
+                alert("خطأ في الاتصال.");
             });
         };
 
@@ -651,11 +685,14 @@
                 update(ref(db, 'users/' + currentUser), { avatar: currentAvatar }).then(() => {
                     alert("تم تحديث الصورة الشخصية بنجاح!");
                     document.getElementById("profileEditModal").style.display = "none";
+                }).catch(() => {
+                    alert("تم الحفظ محلياً (لا يوجد إنترنت لتحديثه للخادم حالياً).");
+                    document.getElementById("profileEditModal").style.display = "none";
                 });
             }
         };
 
-        function appendSingleMessage(msgId, data, container) {
+        function appendSingleMessage(msgId, data, container, scrollToBottom) {
             let hiddenFor = data.hiddenFor || [];
             if (hiddenFor.includes(currentUser)) return;
 
@@ -677,7 +714,9 @@
             };
 
             container.appendChild(msgDiv);
-            container.scrollTop = container.scrollHeight;
+            if (scrollToBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
 
         function renderMessageContent(msgDiv, data, msgId) {
@@ -728,23 +767,23 @@
             let textVal = msgInput.value.trim();
             if (!textVal || !currentTarget) return;
 
-            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, targetSafeSort(currentTarget)].join("_");
+            let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
             let newMsgRef = push(ref(db, chatPath));
             
-            set(newMsgRef, {
+            let msgData = {
                 sender: currentUser,
                 avatar: currentAvatar || "",
                 text: textVal,
                 type: "text",
                 timestamp: Date.now()
+            };
+
+            set(newMsgRef, msgData).catch(() => {
+                alert("تعذر إرسال الرسالة لعدم وجود اتصال بالإنترنت.");
             });
 
             msgInput.value = "";
         };
-
-        function targetSafeSort(target) {
-            return [currentUser, target].sort().join("_").replace(currentUser + "_", "").replace("_" + currentUser, "");
-        }
 
         window.sendMedia = function(input, type) {
             if (input.files && input.files[0]) {
@@ -754,12 +793,16 @@
                     let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
                     let newMsgRef = push(ref(db, chatPath));
                     
-                    set(newMsgRef, {
+                    let msgData = {
                         sender: currentUser,
                         avatar: currentAvatar || "",
                         text: e.target.result,
                         type: type,
                         timestamp: Date.now()
+                    };
+
+                    set(newMsgRef, msgData).catch(() => {
+                        alert("تعذر إرسال الوسائط لعدم وجود إنترنت.");
                     });
                     input.value = ""; 
                 };
@@ -776,12 +819,23 @@
             if (!selectedMessageId || !currentTarget) return;
             let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
             let userKey = currentUser.replace(/[.#$\/\[\]]/g, "_");
-            update(ref(db, `${chatPath}/${selectedMessageId}/reactions`), { [userKey]: emoji });
+            update(ref(db, `${chatPath}/${selectedMessageId}/reactions`), { [userKey]: emoji }).catch(()=>{});
             document.getElementById("actionModal").style.display = "none";
         };
 
         window.deleteMessageForMe = function() {
             if (!selectedMessageId || !currentTarget) return;
+            let storageKey = "maro_msgs_" + (isGroupChat ? currentTarget : [currentUser, currentTarget].sort().join("_"));
+            let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+            if(localMessages[selectedMessageId]) {
+                if(!localMessages[selectedMessageId].hiddenFor) localMessages[selectedMessageId].hiddenFor = [];
+                if(!localMessages[selectedMessageId].hiddenFor.includes(currentUser)) {
+                    localMessages[selectedMessageId].hiddenFor.push(currentUser);
+                    localStorage.setItem(storageKey, JSON.stringify(localMessages));
+                }
+            }
+
             let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
             let msgRef = ref(db, `${chatPath}/${selectedMessageId}`);
             
@@ -794,14 +848,25 @@
                         update(msgRef, { hiddenFor: hiddenFor });
                     }
                 }
-            });
+            }).catch(()=>{});
+
+            let el = document.getElementById("msg_" + selectedMessageId);
+            if(el) el.remove();
             document.getElementById("actionModal").style.display = "none";
         };
 
         window.deleteMessageForEveryone = function() {
             if (!selectedMessageId || !currentTarget) return;
             let chatPath = isGroupChat ? 'groups/' + currentTarget + '/messages' : 'chats/' + [currentUser, currentTarget].sort().join("_");
-            remove(ref(db, `${chatPath}/${selectedMessageId}`));
+            remove(ref(db, `${chatPath}/${selectedMessageId}`)).catch(()=>{});
+            
+            let storageKey = "maro_msgs_" + (isGroupChat ? currentTarget : [currentUser, currentTarget].sort().join("_"));
+            let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
+            delete localMessages[selectedMessageId];
+            localStorage.setItem(storageKey, JSON.stringify(localMessages));
+
+            let el = document.getElementById("msg_" + selectedMessageId);
+            if(el) el.remove();
             document.getElementById("actionModal").style.display = "none";
         };
     </script>
