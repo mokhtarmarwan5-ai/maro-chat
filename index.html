@@ -78,10 +78,10 @@
 <body>
 
     <div class="app-container">
-        <!-- شاشة تسجيل الدخول / إنشاء حساب -->
+        <!-- شاشة تسجيل الدخول -->
         <div id="authScreen" class="screen active">
             <div class="auth-box">
-                <h2>تسجيل دخول مارو شات</h2>
+                <h2>مروان عمك</h2>
                 
                 <div class="profile-pic-upload">
                     <div class="profile-preview" onclick="document.getElementById('profilePicInput').click()">
@@ -155,7 +155,7 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة صديق باليوزر -->
+    <!-- نافذة إضافة صديق -->
     <div id="addFriendModal" onclick="closeModal(event, 'addFriendModal')">
         <div class="modal-content">
             <h3 style="margin:0; color:#00ffcc; text-align:center;">إضافة صديق جديد</h3>
@@ -175,7 +175,7 @@
         </div>
     </div>
 
-    <!-- نافذة إدارة أعضاء الجروب (للمشرف) -->
+    <!-- نافذة إدارة الجروب -->
     <div id="groupManageModal" onclick="closeModal(event, 'groupManageModal')">
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <h3 style="margin:0; color:#00ffcc; text-align:center;">إدارة أعضاء الجروب</h3>
@@ -186,7 +186,7 @@
         </div>
     </div>
 
-    <!-- نافذة تعديل الحساب والصورة -->
+    <!-- نافذة تعديل الحساب -->
     <div id="profileEditModal" onclick="closeModal(event, 'profileEditModal')">
         <div class="modal-content">
             <h3 style="margin:0; color:#00ffcc; text-align:center;">تعديل الملف الشخصي</h3>
@@ -204,7 +204,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, get, push, onChildAdded, remove, update, onChildChanged, onChildRemoved, limitToLast, query, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, push, onChildAdded, remove, update, onChildChanged, onChildRemoved, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -221,11 +221,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        try {
-            enableIndexedDbPersistence(db).catch((err) => {});
-        } catch(e) {}
-
         const MASTER_ADMIN = "MaroAdmin";
+        const ADMIN_PASS = "maro01103393855maro";
 
         let currentUser = localStorage.getItem("maro_chat_user") || "";
         let currentAvatar = localStorage.getItem("maro_chat_avatar") || "";
@@ -238,7 +235,7 @@
 
         window.onload = function() {
             if (currentUser) {
-                checkBanAndProceed();
+                showUsersScreen();
             }
         };
 
@@ -277,47 +274,28 @@
                 return;
             }
 
-            let userRef = ref(db, 'users/' + uInput);
-            
-            // محاولة التحقق عبر السيرفر أولاً، وإذا فشلت (أوفلاين) يتم الدخول مباشرة بشكل آمن
-            get(userRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    let userData = snapshot.val();
-                    if (userData.password && userData.password !== pInput) {
-                        alert("كلمة المرور غير صحيحة لهذا المستخدم!");
-                        return;
-                    }
-                    currentAvatar = userData.avatar || "https://via.placeholder.com/80";
-                    completeLogin(uInput);
-                } else {
-                    let newAvatar = tempAvatarBase64 || "https://via.placeholder.com/80";
-                    let newUserData = {
-                        username: uInput,
-                        password: pInput,
-                        avatar: newAvatar,
-                        joined: Date.now()
-                    };
-                    set(userRef, newUserData).then(() => {
-                        currentAvatar = newAvatar;
-                        completeLogin(uInput);
-                    }).catch(() => {
-                        currentAvatar = newAvatar;
-                        completeLogin(uInput);
-                    });
-                }
-            }).catch(() => {
-                // لو النت قاطع تماماً والسيرفر مقطوع، ادخل الحساب فوراً طالما الكود شغال
-                currentAvatar = tempAvatarBase64 || "https://via.placeholder.com/80";
-                completeLogin(uInput);
-            });
-        };
+            if (uInput === MASTER_ADMIN && pInput !== ADMIN_PASS) {
+                alert("كلمة سر الآدمن غير صحيحة!");
+                return;
+            }
 
-        function completeLogin(uname) {
-            currentUser = uname;
+            currentUser = uInput;
+            currentAvatar = tempAvatarBase64 || localStorage.getItem("maro_chat_avatar") || "https://via.placeholder.com/80";
+            
             localStorage.setItem("maro_chat_user", currentUser);
             localStorage.setItem("maro_chat_avatar", currentAvatar);
+
+            try {
+                set(ref(db, 'users/' + currentUser), {
+                    username: currentUser,
+                    password: pInput,
+                    avatar: currentAvatar,
+                    joined: Date.now()
+                });
+            } catch(e) {}
+
             showUsersScreen();
-        }
+        };
 
         window.logout = function() {
             if (confirm("هل تريد تسجيل الخروج؟")) {
@@ -326,20 +304,6 @@
                 location.reload();
             }
         };
-
-        function checkBanAndProceed() {
-            get(ref(db, 'bans/' + currentUser)).then((snapshot) => {
-                if (snapshot.exists() && snapshot.val() === true) {
-                    alert("تم حظرك من قِبل الآدمن!");
-                    localStorage.removeItem("maro_chat_user");
-                    location.reload();
-                    return;
-                }
-                showUsersScreen();
-            }).catch(() => {
-                showUsersScreen();
-            });
-        }
 
         function showUsersScreen() {
             document.getElementById("authScreen").classList.remove("active");
@@ -359,16 +323,15 @@
             activeTab = tab;
             document.getElementById("tabUsers").className = "tab-btn " + (tab === 'users' ? 'active' : '');
             document.getElementById("tabGroups").className = "tab-btn " + (tab === 'groups' ? 'active' : '');
-            if(document.getElementById("tabBansBtn").style.display !== 'none') {
-                document.getElementById("tabBans").className = "tab-btn " + (tab === 'bans' ? 'active' : '');
+            let bansBtn = document.getElementById("tabBansBtn");
+            if(bansBtn && bansBtn.style.display !== 'none') {
+                document.getElementById("tabBansBtn").className = "tab-btn " + (tab === 'bans' ? 'active' : '');
             }
             
             let floatBtn = document.getElementById("floatingBtn");
-            if (tab === 'users') floatBtn.innerText = "+ إضافة صديق";
-            else if (tab === 'groups') floatBtn.innerText = "+ إنشاء جروب";
-            else floatBtn.style.display = "none";
-
-            if(tab !== 'bans') floatBtn.style.display = "block";
+            if (tab === 'users') { floatBtn.innerText = "+ إضافة صديق"; floatBtn.style.display = "block"; }
+            else if (tab === 'groups') { floatBtn.innerText = "+ إنشاء جروب"; floatBtn.style.display = "block"; }
+            else { floatBtn.style.display = "none"; }
 
             loadMainList();
         }
@@ -387,20 +350,24 @@
             let isAdm = (currentUser === MASTER_ADMIN);
 
             if (activeTab === 'users') {
-                let myContactsRef = ref(db, 'contacts/' + currentUser);
-                get(myContactsRef).then((snapshot) => {
+                let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
+                if (Object.keys(savedContacts).length > 0) {
+                    Object.keys(savedContacts).forEach((friendName) => {
+                        renderContactItem(friendName, listDiv, isAdm);
+                    });
+                } else {
+                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق)!</div>";
+                }
+
+                get(ref(db, 'contacts/' + currentUser)).then((snapshot) => {
                     if (snapshot.exists()) {
                         let contacts = snapshot.val();
-                        Object.keys(contacts).forEach((friendName) => {
-                            renderContactItem(friendName, listDiv, isAdm);
-                        });
-                    } else {
-                        // محاولة جلب الأصدقاء محلياً
-                        loadLocalContacts(listDiv, isAdm);
+                        let saved = {};
+                        Object.keys(contacts).forEach(f => saved[f] = true);
+                        localStorage.setItem("maro_contacts_" + currentUser, JSON.stringify(saved));
                     }
-                }).catch(() => {
-                    loadLocalContacts(listDiv, isAdm);
-                });
+                }).catch(()=>{});
+
             } else if (activeTab === 'groups') {
                 get(ref(db, 'groups')).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -408,8 +375,8 @@
                         snapshot.forEach((childSnap) => {
                             let gName = childSnap.key;
                             let gData = childSnap.val();
-                            let members = gData.members || {};
-                            if (gData.creator === currentUser || members[currentUser]) {
+                            let members = gData.info?.members || {};
+                            if (gData.info?.creator === currentUser || members[currentUser]) {
                                 foundAny = true;
                                 renderGroupItem(gName, listDiv);
                             }
@@ -417,9 +384,11 @@
                         if (!foundAny) {
                             listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لست منضماً لأي جروب.</div>";
                         }
+                    } else {
+                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا توجد جروبات متاحة حالياً.</div>";
                     }
                 }).catch(() => {
-                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>وضع عدم الاتصال: تعذر جلب الجروبات.</div>";
+                    listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>تعذر جلب الجروبات.</div>";
                 });
             } else if (activeTab === 'bans' && isAdm) {
                 get(ref(db, 'bans')).then((snapshot) => {
@@ -435,17 +404,6 @@
                         });
                     }
                 });
-            }
-        }
-
-        function loadLocalContacts(listDiv, isAdm) {
-            let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
-            if (Object.keys(savedContacts).length > 0) {
-                Object.keys(savedContacts).forEach((friendName) => {
-                    renderContactItem(friendName, listDiv, isAdm);
-                });
-            } else {
-                listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق)!</div>";
             }
         }
 
@@ -492,23 +450,19 @@
                 return;
             }
 
-            set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true).then(() => {
-                saveContactLocally(targetUser);
-            }).catch(() => {
-                saveContactLocally(targetUser);
-            });
-        };
-
-        function saveContactLocally(targetUser) {
             let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
             savedContacts[targetUser] = true;
             localStorage.setItem("maro_contacts_" + currentUser, JSON.stringify(savedContacts));
+
+            try {
+                set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true);
+            } catch(e) {}
 
             alert("تم إضافة الصديق بنجاح!");
             document.getElementById('addFriendModal').style.display = 'none';
             document.getElementById("targetUsernameInput").value = "";
             loadMainList();
-        }
+        };
 
         window.banUser = function(e, uname) {
             e.stopPropagation();
@@ -636,7 +590,7 @@
                     });
                 }
             }).catch(()=>{
-                membersDiv.innerHTML = "تعذر تحميل الأعضاء بدون إنترنت.";
+                membersDiv.innerHTML = "تعذر تحميل الأعضاء.";
             });
         };
 
@@ -648,9 +602,7 @@
                 alert("تمت إضافة العضو بنجاح للجروب!");
                 document.getElementById("memberUsernameInput").value = "";
                 openGroupManager(currentTarget);
-            }).catch(()=>{
-                alert("تم الحفظ (وضع عدم الاتصال).");
-            });
+            }).catch(()=>{});
         };
 
         window.removeGroupMember = function(gName, mName) {
@@ -672,13 +624,9 @@
             if (tempEditAvatarBase64) {
                 currentAvatar = tempEditAvatarBase64;
                 localStorage.setItem("maro_chat_avatar", currentAvatar);
-                update(ref(db, 'users/' + currentUser), { avatar: currentAvatar }).then(() => {
-                    alert("تم تحديث الصورة الشخصية بنجاح!");
-                    document.getElementById("profileEditModal").style.display = "none";
-                }).catch(() => {
-                    alert("تم الحفظ محلياً.");
-                    document.getElementById("profileEditModal").style.display = "none";
-                });
+                update(ref(db, 'users/' + currentUser), { avatar: currentAvatar }).catch(()=>{});
+                alert("تم تحديث الصورة الشخصية بنجاح!");
+                document.getElementById("profileEditModal").style.display = "none";
             }
         };
 
@@ -768,15 +716,14 @@
                 timestamp: Date.now()
             };
 
-            set(newMsgRef, msgData).catch(() => {
-                // حفظ محلياً لو النت قاطع اثناء الإرسال
-                let storageKey = "maro_msgs_" + (isGroupChat ? currentTarget : [currentUser, currentTarget].sort().join("_"));
-                let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
-                let fakeId = "local_" + Date.now();
-                localMessages[fakeId] = msgData;
-                localStorage.setItem(storageKey, JSON.stringify(localMessages));
-                appendSingleMessage(fakeId, msgData, document.getElementById("messagesList"), true);
-            });
+            set(newMsgRef, msgData).catch(() => {});
+
+            let storageKey = "maro_msgs_" + (isGroupChat ? currentTarget : [currentUser, currentTarget].sort().join("_"));
+            let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
+            let fakeId = "local_" + Date.now();
+            localMessages[fakeId] = msgData;
+            localStorage.setItem(storageKey, JSON.stringify(localMessages));
+            appendSingleMessage(fakeId, msgData, document.getElementById("messagesList"), true);
 
             msgInput.value = "";
         };
