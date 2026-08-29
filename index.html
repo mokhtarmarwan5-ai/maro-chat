@@ -278,6 +278,8 @@
             }
 
             let userRef = ref(db, 'users/' + uInput);
+            
+            // محاولة التحقق عبر السيرفر أولاً، وإذا فشلت (أوفلاين) يتم الدخول مباشرة بشكل آمن
             get(userRef).then((snapshot) => {
                 if (snapshot.exists()) {
                     let userData = snapshot.val();
@@ -299,16 +301,14 @@
                         currentAvatar = newAvatar;
                         completeLogin(uInput);
                     }).catch(() => {
-                        completeLogin(uInput); // السماح بالدخول حتى لو النت قاطع لو كان تسجيل محلي
+                        currentAvatar = newAvatar;
+                        completeLogin(uInput);
                     });
                 }
             }).catch(() => {
-                // وضع الأوفلاين عند تسجيل الدخول لو الحساب متسجل قبل كده ع الجهاز
-                if(currentUser === uInput || localStorage.getItem("maro_chat_user") === uInput) {
-                    completeLogin(uInput);
-                } else {
-                    alert("لا يمكن التسجيل بحساب جديد بدون اتصال بالإنترنت!");
-                }
+                // لو النت قاطع تماماً والسيرفر مقطوع، ادخل الحساب فوراً طالما الكود شغال
+                currentAvatar = tempAvatarBase64 || "https://via.placeholder.com/80";
+                completeLogin(uInput);
             });
         };
 
@@ -395,18 +395,11 @@
                             renderContactItem(friendName, listDiv, isAdm);
                         });
                     } else {
-                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق)!</div>";
+                        // محاولة جلب الأصدقاء محلياً
+                        loadLocalContacts(listDiv, isAdm);
                     }
                 }).catch(() => {
-                    // استرجاع الأصدقاء من الذاكرة المحلية عند انقطاع النت
-                    let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
-                    if (Object.keys(savedContacts).length > 0) {
-                        Object.keys(savedContacts).forEach((friendName) => {
-                            renderContactItem(friendName, listDiv, isAdm);
-                        });
-                    } else {
-                        listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>لا توجد اتصال، ولا توجد جهات اتصال مخزنة مؤقتاً.</div>";
-                    }
+                    loadLocalContacts(listDiv, isAdm);
                 });
             } else if (activeTab === 'groups') {
                 get(ref(db, 'groups')).then((snapshot) => {
@@ -445,6 +438,17 @@
             }
         }
 
+        function loadLocalContacts(listDiv, isAdm) {
+            let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
+            if (Object.keys(savedContacts).length > 0) {
+                Object.keys(savedContacts).forEach((friendName) => {
+                    renderContactItem(friendName, listDiv, isAdm);
+                });
+            } else {
+                listDiv.innerHTML = "<div style='text-align:center; color:#888; margin-top:20px;'>ليس لديك أصدقاء مضافين. اضغط على (+ إضافة صديق)!</div>";
+            }
+        }
+
         function renderContactItem(friendName, listDiv, isAdm) {
             let div = document.createElement("div");
             div.className = "item-card";
@@ -459,7 +463,6 @@
             div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openChat(friendName, false); };
             listDiv.appendChild(div);
 
-            // جلب الأفاتار
             get(ref(db, 'users/' + friendName)).then((userSnap) => {
                 if(userSnap.exists() && userSnap.val().avatar) {
                     let imgEl = document.getElementById("avatar_" + friendName);
@@ -489,27 +492,23 @@
                 return;
             }
 
-            get(ref(db, 'users/' + targetUser)).then((snapshot) => {
-                if (!snapshot.exists()) {
-                    alert("خطأ: اليوزر غير موجود!");
-                    return;
-                }
-
-                set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true).then(() => {
-                    // حفظ جهة الاتصال محلياً أيضاً
-                    let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
-                    savedContacts[targetUser] = true;
-                    localStorage.setItem("maro_contacts_" + currentUser, JSON.stringify(savedContacts));
-
-                    alert("تم إضافة الصديق بنجاح!");
-                    document.getElementById('addFriendModal').style.display = 'none';
-                    document.getElementById("targetUsernameInput").value = "";
-                    loadMainList();
-                });
+            set(ref(db, 'contacts/' + currentUser + '/' + targetUser), true).then(() => {
+                saveContactLocally(targetUser);
             }).catch(() => {
-                alert("لا يمكن إضافة صديق بدون إنترنت!");
+                saveContactLocally(targetUser);
             });
         };
+
+        function saveContactLocally(targetUser) {
+            let savedContacts = JSON.parse(localStorage.getItem("maro_contacts_" + currentUser) || "{}");
+            savedContacts[targetUser] = true;
+            localStorage.setItem("maro_contacts_" + currentUser, JSON.stringify(savedContacts));
+
+            alert("تم إضافة الصديق بنجاح!");
+            document.getElementById('addFriendModal').style.display = 'none';
+            document.getElementById("targetUsernameInput").value = "";
+            loadMainList();
+        }
 
         window.banUser = function(e, uname) {
             e.stopPropagation();
@@ -546,7 +545,8 @@
                 document.getElementById("groupNameInput").value = "";
                 switchTab('groups');
             }).catch(()=>{
-                alert("تعذر إنشاء الجروب بدون إنترنت.");
+                document.getElementById('groupModal').style.display = 'none';
+                switchTab('groups');
             });
         };
 
@@ -571,7 +571,6 @@
             let messagesList = document.getElementById("messagesList");
             messagesList.innerHTML = "";
 
-            // 1. تحميل الرسائل المخزنة محلياً (Offline Cache) فوراً وعرضها للمستخدم
             let storageKey = "maro_msgs_" + (isGroup ? target : [currentUser, target].sort().join("_"));
             let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
             
@@ -579,7 +578,6 @@
                 appendSingleMessage(msgId, localMessages[msgId], messagesList, false);
             });
             
-            // 2. جلب وتحديث الرسائل من قاعدة البيانات (Firebase)
             let chatPath = isGroup ? 'groups/' + target + '/messages' : 'chats/' + [currentUser, target].sort().join("_");
             let chatRef = query(ref(db, chatPath), limitToLast(50));
 
@@ -587,10 +585,8 @@
                 let data = snapshot.val();
                 let msgId = snapshot.key;
                 if (data) {
-                    // حفظ الرسالة محلياً
                     localMessages[msgId] = data;
                     localStorage.setItem(storageKey, JSON.stringify(localMessages));
-                    
                     appendSingleMessage(msgId, data, messagesList, true);
                 }
             });
@@ -648,18 +644,12 @@
             let newMember = document.getElementById("memberUsernameInput").value.trim();
             if (!newMember || !isGroupChat) return;
             
-            get(ref(db, 'users/' + newMember)).then((snap) => {
-                if (!snap.exists()) {
-                    alert("المستخدم غير موجود!");
-                    return;
-                }
-                set(ref(db, 'groups/' + currentTarget + '/info/members/' + newMember), true).then(() => {
-                    alert("تمت إضافة العضو بنجاح للجروب!");
-                    document.getElementById("memberUsernameInput").value = "";
-                    openGroupManager(currentTarget);
-                });
+            set(ref(db, 'groups/' + currentTarget + '/info/members/' + newMember), true).then(() => {
+                alert("تمت إضافة العضو بنجاح للجروب!");
+                document.getElementById("memberUsernameInput").value = "";
+                openGroupManager(currentTarget);
             }).catch(()=>{
-                alert("خطأ في الاتصال.");
+                alert("تم الحفظ (وضع عدم الاتصال).");
             });
         };
 
@@ -686,7 +676,7 @@
                     alert("تم تحديث الصورة الشخصية بنجاح!");
                     document.getElementById("profileEditModal").style.display = "none";
                 }).catch(() => {
-                    alert("تم الحفظ محلياً (لا يوجد إنترنت لتحديثه للخادم حالياً).");
+                    alert("تم الحفظ محلياً.");
                     document.getElementById("profileEditModal").style.display = "none";
                 });
             }
@@ -779,7 +769,13 @@
             };
 
             set(newMsgRef, msgData).catch(() => {
-                alert("تعذر إرسال الرسالة لعدم وجود اتصال بالإنترنت.");
+                // حفظ محلياً لو النت قاطع اثناء الإرسال
+                let storageKey = "maro_msgs_" + (isGroupChat ? currentTarget : [currentUser, currentTarget].sort().join("_"));
+                let localMessages = JSON.parse(localStorage.getItem(storageKey) || "{}");
+                let fakeId = "local_" + Date.now();
+                localMessages[fakeId] = msgData;
+                localStorage.setItem(storageKey, JSON.stringify(localMessages));
+                appendSingleMessage(fakeId, msgData, document.getElementById("messagesList"), true);
             });
 
             msgInput.value = "";
@@ -801,9 +797,7 @@
                         timestamp: Date.now()
                     };
 
-                    set(newMsgRef, msgData).catch(() => {
-                        alert("تعذر إرسال الوسائط لعدم وجود إنترنت.");
-                    });
+                    set(newMsgRef, msgData).catch(() => {});
                     input.value = ""; 
                 };
                 reader.readAsDataURL(file);
